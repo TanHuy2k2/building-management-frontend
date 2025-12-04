@@ -1,6 +1,6 @@
-import { Outlet, Link, useLocation, useNavigate } from "react-router";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
+import { Outlet, Link, useLocation, useNavigate } from 'react-router';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
 import {
   Home,
   ShoppingCart,
@@ -11,9 +11,9 @@ import {
   User,
   Bell,
   LogOut,
-} from "lucide-react";
-import { useAuth } from "../../contexts/AuthContext";
-import { getRankDetails } from "../../data/mockData";
+} from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { getRankDetails } from '../../data/mockData';
 
 export default function UserLayout() {
   const location = useLocation();
@@ -22,18 +22,18 @@ export default function UserLayout() {
 
   const handleLogout = () => {
     logout();
-    navigate("/");
+    navigate('/');
   };
 
   const menuItems = [
-    { path: "/user", icon: Home, label: "Trang chủ" },
-    { path: "/user/orders", icon: ShoppingCart, label: "Đặt món" },
-    { path: "/user/reservations", icon: Calendar, label: "Đặt chỗ" },
-    { path: "/user/parking", icon: ParkingCircle, label: "Bãi xe" },
-    { path: "/user/bus", icon: Bus, label: "Xe buýt" },
-    { path: "/user/events", icon: PartyPopper, label: "Sự kiện" },
-    { path: "/user/notifications", icon: Bell, label: "Thông báo" },
-    { path: "/user/profile", icon: User, label: "Tài khoản" },
+    { path: '/user', icon: Home, label: 'Trang chủ' },
+    { path: '/user/orders', icon: ShoppingCart, label: 'Đặt món' },
+    { path: '/user/reservations', icon: Calendar, label: 'Đặt chỗ' },
+    { path: '/user/parking', icon: ParkingCircle, label: 'Bãi xe' },
+    { path: '/user/bus', icon: Bus, label: 'Xe buýt' },
+    { path: '/user/events', icon: PartyPopper, label: 'Sự kiện' },
+    { path: '/user/notifications', icon: Bell, label: 'Thông báo' },
+    { path: '/user/profile', icon: User, label: 'Tài khoản' },
   ];
 
   const rankDetails = currentUser ? getRankDetails(currentUser.rank) : null;
@@ -50,9 +50,7 @@ export default function UserLayout() {
                 <Badge variant="outline" className={rankDetails.bgColor}>
                   <span className={rankDetails.color}>{rankDetails.name}</span>
                 </Badge>
-                <span className="text-sm text-muted-foreground">
-                  {currentUser?.points} điểm
-                </span>
+                <span className="text-sm text-muted-foreground">{currentUser?.points} điểm</span>
               </div>
             )}
           </div>
@@ -77,7 +75,7 @@ export default function UserLayout() {
             return (
               <Link key={item.path} to={item.path}>
                 <Button
-                  variant={isActive ? "secondary" : "ghost"}
+                  variant={isActive ? 'secondary' : 'ghost'}
                   className="w-full flex-col h-auto py-2 px-1"
                   size="sm"
                 >
@@ -99,10 +97,7 @@ export default function UserLayout() {
 
             return (
               <Link key={item.path} to={item.path}>
-                <Button
-                  variant={isActive ? "secondary" : "ghost"}
-                  className="w-full justify-start"
-                >
+                <Button variant={isActive ? 'secondary' : 'ghost'} className="w-full justify-start">
                   <Icon className="size-4 mr-3" />
                   {item.label}
                 </Button>

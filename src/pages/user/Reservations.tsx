@@ -1,21 +1,16 @@
-import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../components/ui/select";
-import { Calendar, Clock, DollarSign } from "lucide-react";
+} from '../../components/ui/select';
+import { Calendar, Clock, DollarSign } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -23,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../../components/ui/dialog";
+} from '../../components/ui/dialog';
 
 export default function UserReservations() {
   const [open, setOpen] = useState(false);
@@ -31,31 +26,31 @@ export default function UserReservations() {
   const facilities = [
     {
       id: 1,
-      name: "Sân Tennis A",
-      type: "field",
+      name: 'Sân Tennis A',
+      type: 'field',
       price: 120000,
-      description: "Sân tennis tiêu chuẩn quốc tế",
+      description: 'Sân tennis tiêu chuẩn quốc tế',
     },
     {
       id: 2,
-      name: "Sân Bóng Đá Mini",
-      type: "field",
+      name: 'Sân Bóng Đá Mini',
+      type: 'field',
       price: 200000,
-      description: "Sân bóng đá 5 người",
+      description: 'Sân bóng đá 5 người',
     },
     {
       id: 3,
-      name: "Phòng Họp A",
-      type: "room",
+      name: 'Phòng Họp A',
+      type: 'room',
       price: 150000,
-      description: "Phòng họp 20 người, có projector",
+      description: 'Phòng họp 20 người, có projector',
     },
     {
       id: 4,
-      name: "Hội Trường",
-      type: "room",
+      name: 'Hội Trường',
+      type: 'room',
       price: 500000,
-      description: "Hội trường 200 người",
+      description: 'Hội trường 200 người',
     },
   ];
 
@@ -103,11 +98,7 @@ export default function UserReservations() {
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setOpen(false)}
-                >
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                   Hủy
                 </Button>
                 <Button type="submit">Đặt chỗ</Button>
@@ -122,9 +113,7 @@ export default function UserReservations() {
           <Card key={facility.id}>
             <CardHeader>
               <CardTitle className="text-base">{facility.name}</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {facility.description}
-              </p>
+              <p className="text-sm text-muted-foreground">{facility.description}</p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -140,9 +129,7 @@ export default function UserReservations() {
               <div className="flex items-center justify-between pt-2 border-t">
                 <div className="flex items-center gap-2">
                   <DollarSign className="size-4 text-muted-foreground" />
-                  <span className="font-semibold">
-                    {facility.price.toLocaleString()} VNĐ/giờ
-                  </span>
+                  <span className="font-semibold">{facility.price.toLocaleString()} VNĐ/giờ</span>
                 </div>
                 <Button onClick={() => setOpen(true)}>Đặt ngay</Button>
               </div>

@@ -1,5 +1,5 @@
-import { Order, OrderStatus, MenuItem } from "../types";
-import { mockOrders, mockMenuItems } from "../data/mockData";
+import { Order, OrderStatus, MenuItem } from '../types';
+import { mockOrders, mockMenuItems } from '../data/mockData';
 
 // Simulate API delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -40,14 +40,14 @@ export async function createOrder(orderData: Partial<Order>): Promise<Order> {
 
   const newOrder: Order = {
     id: `ORD${Date.now()}`,
-    userId: orderData.userId || "",
-    userName: orderData.userName || "",
+    userId: orderData.userId || '',
+    userName: orderData.userName || '',
     items: orderData.items || [],
     total: orderData.total || 0,
     discount: orderData.discount || 0,
     finalAmount: orderData.finalAmount || 0,
-    status: "pending",
-    deliveryType: orderData.deliveryType || "pickup",
+    status: 'pending',
+    deliveryType: orderData.deliveryType || 'pickup',
     deliveryAddress: orderData.deliveryAddress,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -60,10 +60,7 @@ export async function createOrder(orderData: Partial<Order>): Promise<Order> {
  * Update order status
  * Backend API: PATCH /api/orders/:id/status
  */
-export async function updateOrderStatus(
-  orderId: string,
-  status: OrderStatus,
-): Promise<Order> {
+export async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
   await delay(300);
   // TODO: Replace with actual API call
   // return apiRequest<Order>(API_ENDPOINTS.UPDATE_ORDER_STATUS(orderId), {
@@ -72,7 +69,7 @@ export async function updateOrderStatus(
   // });
 
   const order = mockOrders.find((o) => o.id === orderId);
-  if (!order) throw new Error("Order not found");
+  if (!order) throw new Error('Order not found');
 
   return {
     ...order,

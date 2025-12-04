@@ -17,15 +17,15 @@ export interface Order {
   discount: number;
   finalAmount: number;
   status: OrderStatus;
-  deliveryType: "pickup" | "delivery";
+  deliveryType: 'pickup' | 'delivery';
   deliveryAddress?: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export enum OrderStatus {
-  PENDING = "pending",
-  PROCESSING = "processing",
-  COMPLETED = "completed",
-  CANCELLED = "cancelled",
+  PENDING = 'pending',
+  PROCESSING = 'processing',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled',
 }

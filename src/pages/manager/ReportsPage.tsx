@@ -1,12 +1,7 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { mockTransactions, mockRevenueByService } from "../../data/mockData";
-import { Download, FileText, TrendingUp, DollarSign } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { mockTransactions, mockRevenueByService } from '../../data/mockData';
+import { Download, FileText, TrendingUp, DollarSign } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -14,26 +9,21 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../../components/ui/table";
+} from '../../components/ui/table';
 
 export default function ReportsPage() {
   const handleExportCSV = (reportType: string) => {
     alert(`Xuất báo cáo ${reportType} dạng CSV`);
   };
 
-  const totalRevenue = mockRevenueByService.reduce(
-    (sum, item) => sum + item.revenue,
-    0,
-  );
+  const totalRevenue = mockRevenueByService.reduce((sum, item) => sum + item.revenue, 0);
   const totalTransactions = mockTransactions.length;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Báo cáo & Thống kê</h1>
-        <p className="text-muted-foreground">
-          Xuất và phân tích dữ liệu hệ thống
-        </p>
+        <p className="text-muted-foreground">Xuất và phân tích dữ liệu hệ thống</p>
       </div>
 
       {/* Summary Stats */}
@@ -44,9 +34,7 @@ export default function ReportsPage() {
             <DollarSign className="size-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">
-              {(totalRevenue / 1000000).toFixed(1)}M VNĐ
-            </div>
+            <div className="text-2xl font-semibold">{(totalRevenue / 1000000).toFixed(1)}M VNĐ</div>
           </CardContent>
         </Card>
         <Card>
@@ -80,11 +68,9 @@ export default function ReportsPage() {
           <div className="flex items-center justify-between p-3 border rounded-lg">
             <div>
               <p className="font-medium">Báo cáo doanh thu theo dịch vụ</p>
-              <p className="text-sm text-muted-foreground">
-                Xuất dữ liệu doanh thu từng dịch vụ
-              </p>
+              <p className="text-sm text-muted-foreground">Xuất dữ liệu doanh thu từng dịch vụ</p>
             </div>
-            <Button onClick={() => handleExportCSV("Doanh thu")}>
+            <Button onClick={() => handleExportCSV('Doanh thu')}>
               <Download className="size-4 mr-2" />
               Xuất CSV
             </Button>
@@ -92,11 +78,9 @@ export default function ReportsPage() {
           <div className="flex items-center justify-between p-3 border rounded-lg">
             <div>
               <p className="font-medium">Báo cáo giao dịch</p>
-              <p className="text-sm text-muted-foreground">
-                Xuất toàn bộ lịch sử giao dịch
-              </p>
+              <p className="text-sm text-muted-foreground">Xuất toàn bộ lịch sử giao dịch</p>
             </div>
-            <Button onClick={() => handleExportCSV("Giao dịch")}>
+            <Button onClick={() => handleExportCSV('Giao dịch')}>
               <Download className="size-4 mr-2" />
               Xuất CSV
             </Button>
@@ -108,7 +92,7 @@ export default function ReportsPage() {
                 Xuất danh sách người dùng và thông tin rank
               </p>
             </div>
-            <Button onClick={() => handleExportCSV("Người dùng")}>
+            <Button onClick={() => handleExportCSV('Người dùng')}>
               <Download className="size-4 mr-2" />
               Xuất CSV
             </Button>
@@ -141,11 +125,9 @@ export default function ReportsPage() {
                   <TableCell className="capitalize">{txn.type}</TableCell>
                   <TableCell>{txn.finalAmount.toLocaleString()} VNĐ</TableCell>
                   <TableCell className="capitalize">
-                    {txn.paymentMethod.replace("_", " ")}
+                    {txn.paymentMethod.replace('_', ' ')}
                   </TableCell>
-                  <TableCell>
-                    {new Date(txn.createdAt).toLocaleDateString("vi-VN")}
-                  </TableCell>
+                  <TableCell>{new Date(txn.createdAt).toLocaleDateString('vi-VN')}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

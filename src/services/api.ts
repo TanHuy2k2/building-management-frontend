@@ -1,15 +1,11 @@
 // API Base Configuration
-const API_BASE_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:3000/api";
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
 // Simulate API delay for realistic experience
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Generic API request handler
-export async function apiRequest<T>(
-  endpoint: string,
-  options?: RequestInit,
-): Promise<T> {
+export async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
   // Simulate network delay
   await delay(300);
 
@@ -28,63 +24,63 @@ export async function apiRequest<T>(
   //
   // return response.json();
 
-  throw new Error("API request not implemented yet. Using mock data.");
+  throw new Error('API request not implemented yet. Using mock data.');
 }
 
 // API endpoints
 export const API_ENDPOINTS = {
   // Auth
-  LOGIN: "/auth/login",
-  LOGOUT: "/auth/logout",
+  LOGIN: '/auth/login',
+  LOGOUT: '/auth/logout',
 
   // Users
-  USERS: "/users",
+  USERS: '/users',
   USER_BY_ID: (id: string) => `/users/${id}`,
 
   // Orders
-  ORDERS: "/orders",
+  ORDERS: '/orders',
   ORDER_BY_ID: (id: string) => `/orders/${id}`,
-  CREATE_ORDER: "/orders",
+  CREATE_ORDER: '/orders',
   UPDATE_ORDER_STATUS: (id: string) => `/orders/${id}/status`,
 
   // Menu
-  MENU_ITEMS: "/menu",
+  MENU_ITEMS: '/menu',
   MENU_ITEM_BY_ID: (id: string) => `/menu/${id}`,
 
   // Reservations
-  RESERVATIONS: "/reservations",
+  RESERVATIONS: '/reservations',
   RESERVATION_BY_ID: (id: string) => `/reservations/${id}`,
-  CREATE_RESERVATION: "/reservations",
+  CREATE_RESERVATION: '/reservations',
   UPDATE_RESERVATION_STATUS: (id: string) => `/reservations/${id}/status`,
 
   // Parking
-  PARKING_SLOTS: "/parking/slots",
-  PARKING_REGISTRATIONS: "/parking/registrations",
-  CREATE_PARKING_REGISTRATION: "/parking/registrations",
+  PARKING_SLOTS: '/parking/slots',
+  PARKING_REGISTRATIONS: '/parking/registrations',
+  CREATE_PARKING_REGISTRATION: '/parking/registrations',
 
   // Bus
-  BUS_ROUTES: "/bus/routes",
-  BUS_SCHEDULES: "/bus/schedules",
-  BUS_BOOKINGS: "/bus/bookings",
-  CREATE_BUS_BOOKING: "/bus/bookings",
+  BUS_ROUTES: '/bus/routes',
+  BUS_SCHEDULES: '/bus/schedules',
+  BUS_BOOKINGS: '/bus/bookings',
+  CREATE_BUS_BOOKING: '/bus/bookings',
 
   // Events
-  EVENTS: "/events",
+  EVENTS: '/events',
   EVENT_BY_ID: (id: string) => `/events/${id}`,
-  CREATE_EVENT: "/events",
+  CREATE_EVENT: '/events',
   UPDATE_EVENT_STATUS: (id: string) => `/events/${id}/status`,
   EVENT_REGISTRATIONS: (id: string) => `/events/${id}/registrations`,
 
   // Notifications
-  NOTIFICATIONS: "/notifications",
-  CREATE_NOTIFICATION: "/notifications",
+  NOTIFICATIONS: '/notifications',
+  CREATE_NOTIFICATION: '/notifications',
   MARK_NOTIFICATION_READ: (id: string) => `/notifications/${id}/read`,
 
   // Transactions
-  TRANSACTIONS: "/transactions",
+  TRANSACTIONS: '/transactions',
   USER_TRANSACTIONS: (userId: string) => `/users/${userId}/transactions`,
 
   // Dashboard
-  DASHBOARD_STATS: "/dashboard/stats",
-  REVENUE_BY_SERVICE: "/dashboard/revenue-by-service",
+  DASHBOARD_STATS: '/dashboard/stats',
+  REVENUE_BY_SERVICE: '/dashboard/revenue-by-service',
 };

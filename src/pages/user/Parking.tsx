@@ -1,13 +1,8 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
-import { mockParkingSlots } from "../../data/mockData";
-import { ParkingCircle, CheckCircle, XCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+import { mockParkingSlots } from '../../data/mockData';
+import { ParkingCircle, CheckCircle, XCircle } from 'lucide-react';
 
 export default function UserParking() {
   const slots = mockParkingSlots;
@@ -35,9 +30,7 @@ export default function UserParking() {
             <CardTitle className="text-sm">Còn trống</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold text-green-600">
-              {availableSlots.length}
-            </div>
+            <div className="text-2xl font-semibold text-green-600">{availableSlots.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -55,25 +48,21 @@ export default function UserParking() {
         <h2 className="text-lg font-semibold">Khu A</h2>
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
           {slots
-            .filter((s) => s.area === "Khu A")
+            .filter((s) => s.area === 'Khu A')
             .map((slot) => (
               <Card
                 key={slot.id}
-                className={
-                  slot.occupied
-                    ? "opacity-50"
-                    : "hover:shadow-md cursor-pointer"
-                }
+                className={slot.occupied ? 'opacity-50' : 'hover:shadow-md cursor-pointer'}
               >
                 <CardContent className="p-4 text-center">
                   <ParkingCircle
                     className={`size-8 mx-auto mb-2 ${
-                      slot.occupied ? "text-gray-400" : "text-green-600"
+                      slot.occupied ? 'text-gray-400' : 'text-green-600'
                     }`}
                   />
                   <div className="font-semibold">{slot.slotNumber}</div>
                   <Badge
-                    variant={slot.occupied ? "destructive" : "outline"}
+                    variant={slot.occupied ? 'destructive' : 'outline'}
                     className="mt-2 text-xs"
                   >
                     {slot.occupied ? (
@@ -98,25 +87,21 @@ export default function UserParking() {
         <h2 className="text-lg font-semibold">Khu B</h2>
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
           {slots
-            .filter((s) => s.area === "Khu B")
+            .filter((s) => s.area === 'Khu B')
             .map((slot) => (
               <Card
                 key={slot.id}
-                className={
-                  slot.occupied
-                    ? "opacity-50"
-                    : "hover:shadow-md cursor-pointer"
-                }
+                className={slot.occupied ? 'opacity-50' : 'hover:shadow-md cursor-pointer'}
               >
                 <CardContent className="p-4 text-center">
                   <ParkingCircle
                     className={`size-8 mx-auto mb-2 ${
-                      slot.occupied ? "text-gray-400" : "text-green-600"
+                      slot.occupied ? 'text-gray-400' : 'text-green-600'
                     }`}
                   />
                   <div className="font-semibold">{slot.slotNumber}</div>
                   <Badge
-                    variant={slot.occupied ? "destructive" : "outline"}
+                    variant={slot.occupied ? 'destructive' : 'outline'}
                     className="mt-2 text-xs"
                   >
                     {slot.occupied ? (
@@ -146,9 +131,7 @@ export default function UserParking() {
           <div className="flex items-center justify-between p-3 border rounded-lg">
             <div>
               <p className="font-medium">Đăng ký theo tháng</p>
-              <p className="text-sm text-muted-foreground">
-                Ưu đãi cho cư dân thường xuyên
-              </p>
+              <p className="text-sm text-muted-foreground">Ưu đãi cho cư dân thường xuyên</p>
             </div>
             <div className="text-right">
               <p className="font-semibold">1.200.000 VNĐ</p>
@@ -160,9 +143,7 @@ export default function UserParking() {
           <div className="flex items-center justify-between p-3 border rounded-lg">
             <div>
               <p className="font-medium">Đăng ký theo ngày</p>
-              <p className="text-sm text-muted-foreground">
-                Phù hợp cho khách thăm
-              </p>
+              <p className="text-sm text-muted-foreground">Phù hợp cho khách thăm</p>
             </div>
             <div className="text-right">
               <p className="font-semibold">50.000 VNĐ</p>

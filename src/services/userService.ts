@@ -1,5 +1,5 @@
-import { User } from "../types";
-import { mockUsers } from "../data/mockData";
+import { User } from '../types';
+import { mockUsers } from '../data/mockData';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -32,7 +32,7 @@ export async function getUserById(id: string): Promise<User | null> {
 export async function loginUser(
   email: string,
   password: string,
-  role: "manager" | "user",
+  role: 'manager' | 'user',
 ): Promise<User | null> {
   await delay(500);
   // TODO: Replace with actual API call

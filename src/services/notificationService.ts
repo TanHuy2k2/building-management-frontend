@@ -1,5 +1,5 @@
-import { Notification, NotificationType } from "../types";
-import { mockNotifications } from "../data/mockData";
+import { Notification, NotificationType } from '../types';
+import { mockNotifications } from '../data/mockData';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -18,16 +18,14 @@ export async function getNotifications(): Promise<Notification[]> {
  * Get notifications for specific user role
  * Backend API: GET /api/notifications?role=user|manager
  */
-export async function getNotificationsByRole(
-  role: "user" | "manager",
-): Promise<Notification[]> {
+export async function getNotificationsByRole(role: 'user' | 'manager'): Promise<Notification[]> {
   await delay(300);
   // TODO: Replace with actual API call
   // return apiRequest<Notification[]>(`${API_ENDPOINTS.NOTIFICATIONS}?role=${role}`);
 
-  const targetAudience = role === "manager" ? "managers" : "users";
+  const targetAudience = role === 'manager' ? 'managers' : 'users';
   return mockNotifications.filter(
-    (n) => n.targetAudience === "all" || n.targetAudience === targetAudience,
+    (n) => n.targetAudience === 'all' || n.targetAudience === targetAudience,
   );
 }
 
@@ -39,7 +37,7 @@ export async function createNotification(data: {
   title: string;
   message: string;
   type: NotificationType;
-  targetAudience: "all" | "managers" | "users";
+  targetAudience: 'all' | 'managers' | 'users';
 }): Promise<Notification> {
   await delay(500);
   // TODO: Replace with actual API call

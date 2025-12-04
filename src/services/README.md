@@ -19,8 +19,8 @@ Thư mục này chứa các service để gọi API từ backend. Hiện tại �
 ### Import service vào component:
 
 ```tsx
-import { getOrders, createOrder } from "../services/orderService";
-import { getMenuItems } from "../services/orderService";
+import { getOrders, createOrder } from '../services/orderService';
+import { getMenuItems } from '../services/orderService';
 ```
 
 ### Sử dụng trong component:
@@ -36,7 +36,7 @@ useEffect(() => {
       const data = await getOrders();
       setOrders(data);
     } catch (error) {
-      console.error("Error fetching orders:", error);
+      console.error('Error fetching orders:', error);
     } finally {
       setLoading(false);
     }
@@ -161,7 +161,7 @@ try {
   const data = await getOrders();
   setOrders(data);
 } catch (error) {
-  console.error("Error:", error);
+  console.error('Error:', error);
   // Show error toast/notification
 }
 ```
@@ -171,11 +171,11 @@ try {
 Khi backend API yêu cầu authentication, thêm token vào headers:
 
 ```ts
-const token = localStorage.getItem("authToken");
+const token = localStorage.getItem('authToken');
 
 const response = await fetch(`${API_BASE_URL}${endpoint}`, {
   headers: {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
   },
 });

@@ -1,11 +1,6 @@
-import { Link } from "react-router";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
+import { Link } from 'react-router';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
 import {
   ShoppingCart,
   Calendar,
@@ -14,9 +9,9 @@ import {
   PartyPopper,
   Crown,
   TrendingUp,
-} from "lucide-react";
-import { useAuth } from "../../contexts/AuthContext";
-import { getRankDetails } from "../../data/mockData";
+} from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { getRankDetails } from '../../data/mockData';
 
 export default function UserHome() {
   const { currentUser } = useAuth();
@@ -27,44 +22,44 @@ export default function UserHome() {
 
   const services = [
     {
-      title: "Đặt Món Ăn",
-      description: "Đặt món từ nhà hàng",
+      title: 'Đặt Món Ăn',
+      description: 'Đặt món từ nhà hàng',
       icon: ShoppingCart,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-      path: "/user/orders",
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      path: '/user/orders',
     },
     {
-      title: "Đặt Sân/Phòng",
-      description: "Đặt sân thể thao, phòng họp",
+      title: 'Đặt Sân/Phòng',
+      description: 'Đặt sân thể thao, phòng họp',
       icon: Calendar,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
-      path: "/user/reservations",
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+      path: '/user/reservations',
     },
     {
-      title: "Bãi Đậu Xe",
-      description: "Đăng ký chỗ đậu xe",
+      title: 'Bãi Đậu Xe',
+      description: 'Đăng ký chỗ đậu xe',
       icon: ParkingCircle,
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-50",
-      path: "/user/parking",
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-50',
+      path: '/user/parking',
     },
     {
-      title: "Xe Buýt",
-      description: "Đặt chỗ xe buýt nội khu",
+      title: 'Xe Buýt',
+      description: 'Đặt chỗ xe buýt nội khu',
       icon: Bus,
-      color: "text-cyan-600",
-      bgColor: "bg-cyan-50",
-      path: "/user/bus",
+      color: 'text-cyan-600',
+      bgColor: 'bg-cyan-50',
+      path: '/user/bus',
     },
     {
-      title: "Sự Kiện",
-      description: "Tham gia sự kiện cộng đồng",
+      title: 'Sự Kiện',
+      description: 'Tham gia sự kiện cộng đồng',
       icon: PartyPopper,
-      color: "text-pink-600",
-      bgColor: "bg-pink-50",
-      path: "/user/events",
+      color: 'text-pink-600',
+      bgColor: 'bg-pink-50',
+      path: '/user/events',
     },
   ];
 
@@ -94,15 +89,12 @@ export default function UserHome() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Tổng chi tiêu</p>
-              <p className="text-lg font-semibold">
-                {currentUser.totalSpent.toLocaleString()} VNĐ
-              </p>
+              <p className="text-lg font-semibold">{currentUser.totalSpent.toLocaleString()} VNĐ</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Giá trị điểm</p>
               <p className="text-lg font-semibold">
-                {(currentUser.points * rankDetails.pointValue).toLocaleString()}{" "}
-                VNĐ
+                {(currentUser.points * rankDetails.pointValue).toLocaleString()} VNĐ
               </p>
             </div>
           </div>
@@ -110,7 +102,7 @@ export default function UserHome() {
             <div className="flex items-center gap-2 text-sm">
               <TrendingUp className="size-4 text-green-600" />
               <span>
-                Mỗi 20.000 VNĐ chi tiêu = 1 điểm • {rankDetails.name}:{" "}
+                Mỗi 20.000 VNĐ chi tiêu = 1 điểm • {rankDetails.name}:{' '}
                 {rankDetails.pointValue.toLocaleString()} VNĐ/điểm
               </span>
             </div>
@@ -131,14 +123,10 @@ export default function UserHome() {
                     <div className={`p-3 rounded-lg ${service.bgColor} w-fit`}>
                       <Icon className={`size-6 ${service.color}`} />
                     </div>
-                    <CardTitle className="text-base mt-3">
-                      {service.title}
-                    </CardTitle>
+                    <CardTitle className="text-base mt-3">{service.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {service.description}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{service.description}</p>
                   </CardContent>
                 </Card>
               </Link>
@@ -160,9 +148,7 @@ export default function UserHome() {
                   </div>
                   <div>
                     <p className="font-medium">Đồng</p>
-                    <p className="text-sm text-muted-foreground">
-                      Dưới 2 triệu
-                    </p>
+                    <p className="text-sm text-muted-foreground">Dưới 2 triệu</p>
                   </div>
                 </div>
                 <p className="text-sm font-medium">1.000 VNĐ/điểm</p>
@@ -186,9 +172,7 @@ export default function UserHome() {
                   </div>
                   <div>
                     <p className="font-medium">Vàng</p>
-                    <p className="text-sm text-muted-foreground">
-                      5 - 10 triệu
-                    </p>
+                    <p className="text-sm text-muted-foreground">5 - 10 triệu</p>
                   </div>
                 </div>
                 <p className="text-sm font-medium">1.400 VNĐ/điểm</p>
@@ -200,9 +184,7 @@ export default function UserHome() {
                   </div>
                   <div>
                     <p className="font-medium">Bạch Kim</p>
-                    <p className="text-sm text-muted-foreground">
-                      Trên 10 triệu
-                    </p>
+                    <p className="text-sm text-muted-foreground">Trên 10 triệu</p>
                   </div>
                 </div>
                 <p className="text-sm font-medium">1.500 VNĐ/điểm</p>

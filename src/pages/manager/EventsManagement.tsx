@@ -1,51 +1,42 @@
-import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
-import { mockEvents } from "../../data/mockData";
-import { EventStatus } from "../../types";
-import { Calendar, MapPin, Users, Clock } from "lucide-react";
-import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+import { mockEvents } from '../../data/mockData';
+import { EventStatus } from '../../types';
+import { Calendar, MapPin, Users, Clock } from 'lucide-react';
+import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
 
 export default function EventsManagement() {
   const [events, setEvents] = useState(mockEvents);
 
   const getStatusBadge = (status: EventStatus) => {
     const variants = {
-      pending: "secondary",
-      approved: "default",
-      rejected: "destructive",
-      cancelled: "destructive",
-      completed: "outline",
+      pending: 'secondary',
+      approved: 'default',
+      rejected: 'destructive',
+      cancelled: 'destructive',
+      completed: 'outline',
     } as const;
     const labels = {
-      pending: "Chờ duyệt",
-      approved: "Đã duyệt",
-      rejected: "Từ chối",
-      cancelled: "Đã hủy",
-      completed: "Hoàn thành",
+      pending: 'Chờ duyệt',
+      approved: 'Đã duyệt',
+      rejected: 'Từ chối',
+      cancelled: 'Đã hủy',
+      completed: 'Hoàn thành',
     };
     return <Badge variant={variants[status]}>{labels[status]}</Badge>;
   };
 
   const updateStatus = (id: string, status: EventStatus) => {
-    setEvents(
-      events.map((event) => (event.id === id ? { ...event, status } : event)),
-    );
+    setEvents(events.map((event) => (event.id === id ? { ...event, status } : event)));
   };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Quản lý Sự kiện</h1>
-        <p className="text-muted-foreground">
-          Duyệt và quản lý sự kiện cộng đồng
-        </p>
+        <p className="text-muted-foreground">Duyệt và quản lý sự kiện cộng đồng</p>
       </div>
 
       <div className="grid gap-4">
@@ -79,21 +70,19 @@ export default function EventsManagement() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="size-4 text-muted-foreground" />
-                  <span>
-                    {new Date(event.startDate).toLocaleDateString("vi-VN")}
-                  </span>
+                  <span>{new Date(event.startDate).toLocaleDateString('vi-VN')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="size-4 text-muted-foreground" />
                   <span>
-                    {new Date(event.startDate).toLocaleTimeString("vi-VN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}{" "}
-                    -{" "}
-                    {new Date(event.endDate).toLocaleTimeString("vi-VN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
+                    {new Date(event.startDate).toLocaleTimeString('vi-VN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}{' '}
+                    -{' '}
+                    {new Date(event.endDate).toLocaleTimeString('vi-VN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
                     })}
                   </span>
                 </div>
@@ -116,18 +105,15 @@ export default function EventsManagement() {
                 </div>
               </div>
 
-              {event.status === "pending" && (
+              {event.status === 'pending' && (
                 <div className="flex gap-2 pt-2">
-                  <Button
-                    size="sm"
-                    onClick={() => updateStatus(event.id, "approved")}
-                  >
+                  <Button size="sm" onClick={() => updateStatus(event.id, 'approved')}>
                     Phê duyệt
                   </Button>
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={() => updateStatus(event.id, "rejected")}
+                    onClick={() => updateStatus(event.id, 'rejected')}
                   >
                     Từ chối
                   </Button>

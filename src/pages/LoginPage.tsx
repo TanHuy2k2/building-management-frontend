@@ -1,40 +1,29 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../components/ui/tabs";
-import { Building2, Users } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
+import { useState } from 'react';
+import { useNavigate } from 'react-router';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Building2, Users } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [managerEmail, setManagerEmail] = useState("manager@example.com");
-  const [userEmail, setUserEmail] = useState("user@example.com");
+  const [managerEmail, setManagerEmail] = useState('manager@example.com');
+  const [userEmail, setUserEmail] = useState('user@example.com');
 
   const handleManagerLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    login(managerEmail, "manager");
-    navigate("/manager");
+    login(managerEmail, 'manager');
+    navigate('/manager');
   };
 
   const handleUserLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    login(userEmail, "user");
-    navigate("/user");
+    login(userEmail, 'user');
+    navigate('/user');
   };
 
   return (

@@ -1,18 +1,13 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
-import { Input } from "../../components/ui/input";
-import { mockUsers, getRankDetails } from "../../data/mockData";
-import { Search, User, Crown } from "lucide-react";
-import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
+import { Input } from '../../components/ui/input';
+import { mockUsers, getRankDetails } from '../../data/mockData';
+import { Search, User, Crown } from 'lucide-react';
+import { useState } from 'react';
 
 export default function UsersManagement() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const users = mockUsers.filter((u) => u.role === "user");
+  const [searchTerm, setSearchTerm] = useState('');
+  const users = mockUsers.filter((u) => u.role === 'user');
 
   const filteredUsers = users.filter(
     (user) =>
@@ -54,7 +49,7 @@ export default function UsersManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold text-purple-600">
-              {users.filter((u) => u.rank === "platinum").length}
+              {users.filter((u) => u.rank === 'platinum').length}
             </div>
           </CardContent>
         </Card>
@@ -64,7 +59,7 @@ export default function UsersManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold text-yellow-600">
-              {users.filter((u) => u.rank === "gold").length}
+              {users.filter((u) => u.rank === 'gold').length}
             </div>
           </CardContent>
         </Card>
@@ -74,10 +69,7 @@ export default function UsersManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold text-gray-600">
-              {
-                users.filter((u) => u.rank === "silver" || u.rank === "bronze")
-                  .length
-              }
+              {users.filter((u) => u.rank === 'silver' || u.rank === 'bronze').length}
             </div>
           </CardContent>
         </Card>
@@ -99,27 +91,17 @@ export default function UsersManagement() {
                       <p className="font-medium">{user.name}</p>
                       <Badge variant="outline" className={rankDetails.bgColor}>
                         <Crown className={`size-3 mr-1 ${rankDetails.color}`} />
-                        <span className={rankDetails.color}>
-                          {rankDetails.name}
-                        </span>
+                        <span className={rankDetails.color}>{rankDetails.name}</span>
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {user.email}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {user.phone}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <p className="text-sm text-muted-foreground">{user.phone}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold">
-                    {user.totalSpent.toLocaleString()} VNĐ
-                  </p>
+                  <p className="font-semibold">{user.totalSpent.toLocaleString()} VNĐ</p>
                   <p className="text-sm text-muted-foreground">Tổng chi tiêu</p>
-                  <p className="text-sm text-blue-600 mt-1">
-                    {user.points} điểm
-                  </p>
+                  <p className="text-sm text-blue-600 mt-1">{user.points} điểm</p>
                 </div>
               </CardContent>
             </Card>
