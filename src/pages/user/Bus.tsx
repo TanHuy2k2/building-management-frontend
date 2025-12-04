@@ -1,11 +1,16 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { mockBusRoutes, mockBusSchedules } from '../../data/mockData';
-import { Bus as BusIcon, MapPin, Clock, Users } from 'lucide-react';
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { mockBusRoutes, mockBusSchedules } from "../../data/mockData";
+import { Bus as BusIcon, MapPin, Clock, Users } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,14 +18,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../../components/ui/dialog';
+} from "../../components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../components/ui/select';
+} from "../../components/ui/select";
 
 export default function UserBus() {
   const [open, setOpen] = useState(false);
@@ -81,7 +86,11 @@ export default function UserBus() {
                 <Input type="number" min="1" max="5" defaultValue="1" />
               </div>
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                >
                   Hủy
                 </Button>
                 <Button type="submit">Xác nhận</Button>
@@ -106,14 +115,18 @@ export default function UserBus() {
                     <MapPin className="size-4 text-green-600 mt-1 flex-shrink-0" />
                     <div>
                       <p className="text-sm font-medium">Điểm đi</p>
-                      <p className="text-sm text-muted-foreground">{route.startPoint}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {route.startPoint}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <MapPin className="size-4 text-red-600 mt-1 flex-shrink-0" />
                     <div>
                       <p className="text-sm font-medium">Điểm đến</p>
-                      <p className="text-sm text-muted-foreground">{route.endPoint}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {route.endPoint}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -167,10 +180,14 @@ export default function UserBus() {
                     </div>
                     <div>
                       <p className="font-medium">{schedule.busNumber}</p>
-                      <p className="text-sm text-muted-foreground">{route?.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {route?.name}
+                      </p>
                       <div className="flex items-center gap-2 mt-1">
                         <Clock className="size-3 text-muted-foreground" />
-                        <span className="text-sm">{schedule.departureTime}</span>
+                        <span className="text-sm">
+                          {schedule.departureTime}
+                        </span>
                       </div>
                     </div>
                   </div>

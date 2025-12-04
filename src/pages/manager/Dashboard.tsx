@@ -1,4 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
 import {
   DollarSign,
   ShoppingCart,
@@ -8,8 +13,8 @@ import {
   Bus,
   PartyPopper,
   TrendingUp,
-} from 'lucide-react';
-import { mockDashboardStats, mockRevenueByService } from '../../data/mockData';
+} from "lucide-react";
+import { mockDashboardStats, mockRevenueByService } from "../../data/mockData";
 import {
   BarChart,
   Bar,
@@ -22,71 +27,71 @@ import {
   Pie,
   Cell,
   Legend,
-} from 'recharts';
+} from "recharts";
 
 export default function ManagerDashboard() {
   const stats = mockDashboardStats;
 
   const statCards = [
     {
-      title: 'Tổng doanh thu',
+      title: "Tổng doanh thu",
       value: `${(stats.totalRevenue / 1000000).toFixed(1)}M`,
       icon: DollarSign,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
+      color: "text-green-600",
+      bgColor: "bg-green-50",
     },
     {
-      title: 'Đơn hàng',
+      title: "Đơn hàng",
       value: stats.totalOrders,
       icon: ShoppingCart,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
+      color: "text-blue-600",
+      bgColor: "bg-blue-50",
     },
     {
-      title: 'Đặt chỗ',
+      title: "Đặt chỗ",
       value: stats.totalReservations,
       icon: Calendar,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
+      color: "text-purple-600",
+      bgColor: "bg-purple-50",
     },
     {
-      title: 'Người dùng',
+      title: "Người dùng",
       value: stats.totalUsers,
       icon: Users,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
+      color: "text-orange-600",
+      bgColor: "bg-orange-50",
     },
     {
-      title: 'Bãi xe đang dùng',
+      title: "Bãi xe đang dùng",
       value: stats.activeParking,
       icon: ParkingCircle,
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-50',
+      color: "text-indigo-600",
+      bgColor: "bg-indigo-50",
     },
     {
-      title: 'Xe buýt hôm nay',
+      title: "Xe buýt hôm nay",
       value: stats.todayBusBookings,
       icon: Bus,
-      color: 'text-cyan-600',
-      bgColor: 'bg-cyan-50',
+      color: "text-cyan-600",
+      bgColor: "bg-cyan-50",
     },
     {
-      title: 'Sự kiện sắp tới',
+      title: "Sự kiện sắp tới",
       value: stats.upcomingEvents,
       icon: PartyPopper,
-      color: 'text-pink-600',
-      bgColor: 'bg-pink-50',
+      color: "text-pink-600",
+      bgColor: "bg-pink-50",
     },
     {
-      title: 'Thông báo mới',
+      title: "Thông báo mới",
       value: stats.unreadNotifications,
       icon: TrendingUp,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
+      color: "text-red-600",
+      bgColor: "bg-red-50",
     },
   ];
 
-  const COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#06b6d4', '#ec4899'];
+  const COLORS = ["#3b82f6", "#8b5cf6", "#f59e0b", "#06b6d4", "#ec4899"];
 
   return (
     <div className="space-y-6">
@@ -157,7 +162,10 @@ export default function ManagerDashboard() {
                   label={(entry) => entry.service}
                 >
                   {mockRevenueByService.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
                   ))}
                 </Pie>
                 <Tooltip

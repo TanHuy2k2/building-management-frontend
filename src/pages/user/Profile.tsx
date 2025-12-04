@@ -1,9 +1,14 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
-import { useAuth } from '../../contexts/AuthContext';
-import { getRankDetails, mockTransactions } from '../../data/mockData';
-import { User, Crown, DollarSign, Award, TrendingUp } from 'lucide-react';
-import { Progress } from '../../components/ui/progress';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import { useAuth } from "../../contexts/AuthContext";
+import { getRankDetails, mockTransactions } from "../../data/mockData";
+import { User, Crown, DollarSign, Award, TrendingUp } from "lucide-react";
+import { Progress } from "../../components/ui/progress";
 
 export default function UserProfile() {
   const { currentUser } = useAuth();
@@ -11,14 +16,16 @@ export default function UserProfile() {
   if (!currentUser) return null;
 
   const rankDetails = getRankDetails(currentUser.rank);
-  const userTransactions = mockTransactions.filter((t) => t.userId === currentUser.id);
+  const userTransactions = mockTransactions.filter(
+    (t) => t.userId === currentUser.id,
+  );
 
   // Calculate next rank
   const ranks = [
-    { name: 'bronze', min: 0, max: 2000000 },
-    { name: 'silver', min: 2000000, max: 5000000 },
-    { name: 'gold', min: 5000000, max: 10000000 },
-    { name: 'platinum', min: 10000000, max: Infinity },
+    { name: "bronze", min: 0, max: 2000000 },
+    { name: "silver", min: 2000000, max: 5000000 },
+    { name: "gold", min: 5000000, max: 10000000 },
+    { name: "platinum", min: 10000000, max: Infinity },
   ];
   const currentRankIndex = ranks.findIndex((r) => r.name === currentUser.rank);
   const nextRank = ranks[currentRankIndex + 1];
@@ -32,7 +39,9 @@ export default function UserProfile() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Tài Khoản</h1>
-        <p className="text-muted-foreground">Thông tin cá nhân và hạng thành viên</p>
+        <p className="text-muted-foreground">
+          Thông tin cá nhân và hạng thành viên
+        </p>
       </div>
 
       {/* Profile Card */}
@@ -65,7 +74,8 @@ export default function UserProfile() {
           <CardContent>
             <div className="text-2xl font-semibold">{currentUser.points}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              ≈ {(currentUser.points * rankDetails.pointValue).toLocaleString()} VNĐ
+              ≈ {(currentUser.points * rankDetails.pointValue).toLocaleString()}{" "}
+              VNĐ
             </p>
           </CardContent>
         </Card>
@@ -89,7 +99,9 @@ export default function UserProfile() {
             <TrendingUp className="size-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">{userTransactions.length}</div>
+            <div className="text-2xl font-semibold">
+              {userTransactions.length}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">Tổng số</p>
           </CardContent>
         </Card>
@@ -107,13 +119,14 @@ export default function UserProfile() {
                 {rankDetails.name} → {getRankDetails(nextRank.name).name}
               </span>
               <span>
-                {currentUser.totalSpent.toLocaleString()} / {nextRank.min.toLocaleString()} VNĐ
+                {currentUser.totalSpent.toLocaleString()} /{" "}
+                {nextRank.min.toLocaleString()} VNĐ
               </span>
             </div>
             <Progress value={progressToNextRank} />
             <p className="text-sm text-muted-foreground">
-              Còn {(nextRank.min - currentUser.totalSpent).toLocaleString()} VNĐ để lên hạng{' '}
-              {getRankDetails(nextRank.name).name}
+              Còn {(nextRank.min - currentUser.totalSpent).toLocaleString()} VNĐ
+              để lên hạng {getRankDetails(nextRank.name).name}
             </p>
           </CardContent>
         </Card>
@@ -163,18 +176,23 @@ export default function UserProfile() {
         <CardContent>
           <div className="space-y-3">
             {userTransactions.slice(0, 5).map((txn) => (
-              <div key={txn.id} className="flex items-center justify-between py-2 border-b last:border-0">
+              <div
+                key={txn.id}
+                className="flex items-center justify-between py-2 border-b last:border-0"
+              >
                 <div>
                   <p className="font-medium capitalize">{txn.type}</p>
                   <p className="text-sm text-muted-foreground">
-                    {new Date(txn.createdAt).toLocaleDateString('vi-VN')}
+                    {new Date(txn.createdAt).toLocaleDateString("vi-VN")}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">
                     {txn.finalAmount.toLocaleString()} VNĐ
                   </p>
-                  <p className="text-sm text-blue-600">+{txn.pointsEarned} điểm</p>
+                  <p className="text-sm text-blue-600">
+                    +{txn.pointsEarned} điểm
+                  </p>
                 </div>
               </div>
             ))}

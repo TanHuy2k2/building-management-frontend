@@ -1,8 +1,8 @@
-import { Order, OrderStatus, MenuItem } from '../types';
-import { mockOrders, mockMenuItems } from '../data/mockData';
+import { Order, OrderStatus, MenuItem } from "../types";
+import { mockOrders, mockMenuItems } from "../data/mockData";
 
 // Simulate API delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Get all orders
@@ -23,7 +23,7 @@ export async function getOrderById(id: string): Promise<Order | null> {
   await delay(200);
   // TODO: Replace with actual API call
   // return apiRequest<Order>(API_ENDPOINTS.ORDER_BY_ID(id));
-  return mockOrders.find(order => order.id === id) || null;
+  return mockOrders.find((order) => order.id === id) || null;
 }
 
 /**
@@ -37,22 +37,22 @@ export async function createOrder(orderData: Partial<Order>): Promise<Order> {
   //   method: 'POST',
   //   body: JSON.stringify(orderData),
   // });
-  
+
   const newOrder: Order = {
     id: `ORD${Date.now()}`,
-    userId: orderData.userId || '',
-    userName: orderData.userName || '',
+    userId: orderData.userId || "",
+    userName: orderData.userName || "",
     items: orderData.items || [],
     total: orderData.total || 0,
     discount: orderData.discount || 0,
     finalAmount: orderData.finalAmount || 0,
-    status: 'pending',
-    deliveryType: orderData.deliveryType || 'pickup',
+    status: "pending",
+    deliveryType: orderData.deliveryType || "pickup",
     deliveryAddress: orderData.deliveryAddress,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  
+
   return newOrder;
 }
 
@@ -62,7 +62,7 @@ export async function createOrder(orderData: Partial<Order>): Promise<Order> {
  */
 export async function updateOrderStatus(
   orderId: string,
-  status: OrderStatus
+  status: OrderStatus,
 ): Promise<Order> {
   await delay(300);
   // TODO: Replace with actual API call
@@ -70,10 +70,10 @@ export async function updateOrderStatus(
   //   method: 'PATCH',
   //   body: JSON.stringify({ status }),
   // });
-  
-  const order = mockOrders.find(o => o.id === orderId);
-  if (!order) throw new Error('Order not found');
-  
+
+  const order = mockOrders.find((o) => o.id === orderId);
+  if (!order) throw new Error("Order not found");
+
   return {
     ...order,
     status,
@@ -100,5 +100,5 @@ export async function getOrdersByUserId(userId: string): Promise<Order[]> {
   await delay(300);
   // TODO: Replace with actual API call
   // return apiRequest<Order[]>(`/users/${userId}/orders`);
-  return mockOrders.filter(order => order.userId === userId);
+  return mockOrders.filter((order) => order.userId === userId);
 }

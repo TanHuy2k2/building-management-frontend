@@ -1,31 +1,42 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import { mockEvents } from '../../data/mockData';
-import { Calendar, MapPin, Users, Clock } from 'lucide-react';
-import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
+import { mockEvents } from "../../data/mockData";
+import { Calendar, MapPin, Users, Clock } from "lucide-react";
+import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 
 export default function UserEvents() {
-  const events = mockEvents.filter((e) => e.status === 'approved');
+  const events = mockEvents.filter((e) => e.status === "approved");
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Sự Kiện Cộng Đồng</h1>
-        <p className="text-muted-foreground">Tham gia các hoạt động cộng đồng</p>
+        <p className="text-muted-foreground">
+          Tham gia các hoạt động cộng đồng
+        </p>
       </div>
 
       <div className="grid gap-6">
         {events.map((event) => {
           const spotsLeft = event.maxParticipants - event.currentParticipants;
-          const percentFull = (event.currentParticipants / event.maxParticipants) * 100;
+          const percentFull =
+            (event.currentParticipants / event.maxParticipants) * 100;
 
           return (
             <Card key={event.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <CardTitle className="text-xl">{event.title}</CardTitle>
-                  <Badge variant="outline" className="bg-green-50 text-green-700">
+                  <Badge
+                    variant="outline"
+                    className="bg-green-50 text-green-700"
+                  >
                     Đã duyệt
                   </Badge>
                 </div>
@@ -53,20 +64,20 @@ export default function UserEvents() {
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="size-4 text-muted-foreground" />
                     <span>
-                      {new Date(event.startDate).toLocaleDateString('vi-VN')}
+                      {new Date(event.startDate).toLocaleDateString("vi-VN")}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Clock className="size-4 text-muted-foreground" />
                     <span>
-                      {new Date(event.startDate).toLocaleTimeString('vi-VN', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}{' '}
-                      -{' '}
-                      {new Date(event.endDate).toLocaleTimeString('vi-VN', {
-                        hour: '2-digit',
-                        minute: '2-digit',
+                      {new Date(event.startDate).toLocaleTimeString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}{" "}
+                      -{" "}
+                      {new Date(event.endDate).toLocaleTimeString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </span>
                   </div>
@@ -74,7 +85,9 @@ export default function UserEvents() {
 
                 <div className="border-t pt-4 space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Số lượng tham gia:</span>
+                    <span className="text-muted-foreground">
+                      Số lượng tham gia:
+                    </span>
                     <span className="font-medium">
                       {event.currentParticipants}/{event.maxParticipants} người
                     </span>
@@ -82,7 +95,7 @@ export default function UserEvents() {
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full ${
-                        percentFull >= 90 ? 'bg-red-600' : 'bg-blue-600'
+                        percentFull >= 90 ? "bg-red-600" : "bg-blue-600"
                       }`}
                       style={{ width: `${percentFull}%` }}
                     />
@@ -96,7 +109,7 @@ export default function UserEvents() {
                   )}
 
                   <Button className="w-full" disabled={spotsLeft === 0}>
-                    {spotsLeft > 0 ? 'Đăng ký tham gia' : 'Hết chỗ'}
+                    {spotsLeft > 0 ? "Đăng ký tham gia" : "Hết chỗ"}
                   </Button>
                 </div>
               </CardContent>

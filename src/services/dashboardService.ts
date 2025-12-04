@@ -1,7 +1,7 @@
-import { DashboardStats, RevenueByService } from '../types';
-import { mockDashboardStats, mockRevenueByService } from '../data/mockData';
+import { DashboardStats, RevenueByService } from "../types";
+import { mockDashboardStats, mockRevenueByService } from "../data/mockData";
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Get dashboard statistics

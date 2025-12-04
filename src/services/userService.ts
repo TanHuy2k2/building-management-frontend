@@ -1,7 +1,7 @@
-import { User } from '../types';
-import { mockUsers } from '../data/mockData';
+import { User } from "../types";
+import { mockUsers } from "../data/mockData";
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Get all users
@@ -22,7 +22,7 @@ export async function getUserById(id: string): Promise<User | null> {
   await delay(200);
   // TODO: Replace with actual API call
   // return apiRequest<User>(API_ENDPOINTS.USER_BY_ID(id));
-  return mockUsers.find(user => user.id === id) || null;
+  return mockUsers.find((user) => user.id === id) || null;
 }
 
 /**
@@ -32,7 +32,7 @@ export async function getUserById(id: string): Promise<User | null> {
 export async function loginUser(
   email: string,
   password: string,
-  role: 'manager' | 'user'
+  role: "manager" | "user",
 ): Promise<User | null> {
   await delay(500);
   // TODO: Replace with actual API call
@@ -40,8 +40,8 @@ export async function loginUser(
   //   method: 'POST',
   //   body: JSON.stringify({ email, password, role }),
   // });
-  
-  const user = mockUsers.find(u => u.email === email && u.role === role);
+
+  const user = mockUsers.find((u) => u.email === email && u.role === role);
   return user || null;
 }
 
@@ -53,5 +53,5 @@ export async function getUserProfile(userId: string): Promise<User | null> {
   await delay(200);
   // TODO: Replace with actual API call with auth token
   // return apiRequest<User>('/users/profile');
-  return mockUsers.find(user => user.id === userId) || null;
+  return mockUsers.find((user) => user.id === userId) || null;
 }

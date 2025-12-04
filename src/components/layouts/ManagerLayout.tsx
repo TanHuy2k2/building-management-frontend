@@ -1,5 +1,5 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router';
-import { Button } from '../ui/button';
+import { Outlet, Link, useLocation, useNavigate } from "react-router";
+import { Button } from "../ui/button";
 import {
   LayoutDashboard,
   Bell,
@@ -13,9 +13,9 @@ import {
   LogOut,
   Menu,
   X,
-} from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useState } from 'react';
+} from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
+import { useState } from "react";
 
 export default function ManagerLayout() {
   const location = useLocation();
@@ -25,19 +25,19 @@ export default function ManagerLayout() {
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate("/");
   };
 
   const menuItems = [
-    { path: '/manager', icon: LayoutDashboard, label: 'Tổng quan' },
-    { path: '/manager/notifications', icon: Bell, label: 'Thông báo' },
-    { path: '/manager/orders', icon: ShoppingCart, label: 'Đơn hàng' },
-    { path: '/manager/reservations', icon: Calendar, label: 'Đặt chỗ' },
-    { path: '/manager/parking', icon: ParkingCircle, label: 'Bãi xe' },
-    { path: '/manager/bus', icon: Bus, label: 'Xe buýt' },
-    { path: '/manager/events', icon: PartyPopper, label: 'Sự kiện' },
-    { path: '/manager/users', icon: Users, label: 'Người dùng' },
-    { path: '/manager/reports', icon: FileText, label: 'Báo cáo' },
+    { path: "/manager", icon: LayoutDashboard, label: "Tổng quan" },
+    { path: "/manager/notifications", icon: Bell, label: "Thông báo" },
+    { path: "/manager/orders", icon: ShoppingCart, label: "Đơn hàng" },
+    { path: "/manager/reservations", icon: Calendar, label: "Đặt chỗ" },
+    { path: "/manager/parking", icon: ParkingCircle, label: "Bãi xe" },
+    { path: "/manager/bus", icon: Bus, label: "Xe buýt" },
+    { path: "/manager/events", icon: PartyPopper, label: "Sự kiện" },
+    { path: "/manager/users", icon: Users, label: "Người dùng" },
+    { path: "/manager/reports", icon: FileText, label: "Báo cáo" },
   ];
 
   return (
@@ -57,12 +57,14 @@ export default function ManagerLayout() {
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 bottom-0 w-64 bg-white border-r z-40 transition-transform lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="p-6 border-b">
           <h1 className="font-semibold text-lg">Quản Lý Hệ Thống</h1>
-          <p className="text-sm text-muted-foreground mt-1">{currentUser?.name}</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {currentUser?.name}
+          </p>
         </div>
 
         <nav className="p-4 space-y-1">
@@ -70,12 +72,17 @@ export default function ManagerLayout() {
             const Icon = item.icon;
             const isActive =
               location.pathname === item.path ||
-              (item.path !== '/manager' && location.pathname.startsWith(item.path));
+              (item.path !== "/manager" &&
+                location.pathname.startsWith(item.path));
 
             return (
-              <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}>
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setSidebarOpen(false)}
+              >
                 <Button
-                  variant={isActive ? 'secondary' : 'ghost'}
+                  variant={isActive ? "secondary" : "ghost"}
                   className="w-full justify-start"
                 >
                   <Icon className="size-4 mr-3" />
@@ -87,7 +94,11 @@ export default function ManagerLayout() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
-          <Button variant="outline" className="w-full justify-start" onClick={handleLogout}>
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            onClick={handleLogout}
+          >
             <LogOut className="size-4 mr-3" />
             Đăng xuất
           </Button>

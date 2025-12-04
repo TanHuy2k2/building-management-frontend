@@ -1,8 +1,17 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
-import { Progress } from '../../components/ui/progress';
-import { mockBusRoutes, mockBusSchedules, mockBusBookings } from '../../data/mockData';
-import { Bus, MapPin, Clock, Users } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import { Progress } from "../../components/ui/progress";
+import {
+  mockBusRoutes,
+  mockBusSchedules,
+  mockBusBookings,
+} from "../../data/mockData";
+import { Bus, MapPin, Clock, Users } from "lucide-react";
 
 export default function BusManagement() {
   const routes = mockBusRoutes;
@@ -13,7 +22,9 @@ export default function BusManagement() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Quản lý Xe buýt</h1>
-        <p className="text-muted-foreground">Quản lý tuyến đường và lịch trình xe buýt</p>
+        <p className="text-muted-foreground">
+          Quản lý tuyến đường và lịch trình xe buýt
+        </p>
       </div>
 
       {/* Routes */}
@@ -31,14 +42,18 @@ export default function BusManagement() {
                     <MapPin className="size-4 text-green-600 mt-1" />
                     <div>
                       <p className="text-sm font-medium">Điểm đi</p>
-                      <p className="text-sm text-muted-foreground">{route.startPoint}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {route.startPoint}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <MapPin className="size-4 text-red-600 mt-1" />
                     <div>
                       <p className="text-sm font-medium">Điểm đến</p>
-                      <p className="text-sm text-muted-foreground">{route.endPoint}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {route.endPoint}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -75,7 +90,8 @@ export default function BusManagement() {
         <h2 className="text-lg font-semibold">Lịch trình hôm nay</h2>
         {schedules.map((schedule) => {
           const route = routes.find((r) => r.id === schedule.routeId);
-          const occupancyRate = (schedule.bookedSeats / schedule.capacity) * 100;
+          const occupancyRate =
+            (schedule.bookedSeats / schedule.capacity) * 100;
 
           return (
             <Card key={schedule.id}>
@@ -86,7 +102,9 @@ export default function BusManagement() {
                       <Bus className="size-5" />
                       {schedule.busNumber}
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">{route?.name}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {route?.name}
+                    </p>
                   </div>
                   <Badge className="bg-blue-100 text-blue-800">
                     {schedule.departureTime}
@@ -127,19 +145,25 @@ export default function BusManagement() {
           <CardContent className="p-0">
             <div className="divide-y">
               {bookings.map((booking) => (
-                <div key={booking.id} className="p-4 flex items-center justify-between">
+                <div
+                  key={booking.id}
+                  className="p-4 flex items-center justify-between"
+                >
                   <div>
                     <p className="font-medium">{booking.userName}</p>
                     <p className="text-sm text-muted-foreground">
                       {booking.routeName}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {new Date(booking.date).toLocaleDateString('vi-VN')} •{' '}
+                      {new Date(booking.date).toLocaleDateString("vi-VN")} •{" "}
                       {booking.departureTime}
                     </p>
                   </div>
                   <div className="text-right">
-                    <Badge variant="outline" className="bg-green-50 text-green-700">
+                    <Badge
+                      variant="outline"
+                      className="bg-green-50 text-green-700"
+                    >
                       {booking.seats} chỗ
                     </Badge>
                     <p className="text-sm font-medium mt-1">

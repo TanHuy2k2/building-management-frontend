@@ -1,20 +1,25 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea';
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Textarea } from "../../components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../components/ui/select';
-import { Badge } from '../../components/ui/badge';
-import { Plus, AlertCircle, Megaphone, Users } from 'lucide-react';
-import { mockNotifications } from '../../data/mockData';
-import { NotificationType } from '../../types';
+} from "../../components/ui/select";
+import { Badge } from "../../components/ui/badge";
+import { Plus, AlertCircle, Megaphone, Users } from "lucide-react";
+import { mockNotifications } from "../../data/mockData";
+import { NotificationType } from "../../types";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../../components/ui/dialog';
+} from "../../components/ui/dialog";
 
 export default function NotificationsManagement() {
   const [notifications] = useState(mockNotifications);
@@ -30,25 +35,25 @@ export default function NotificationsManagement() {
 
   const getTypeIcon = (type: NotificationType) => {
     switch (type) {
-      case 'emergency':
+      case "emergency":
         return <AlertCircle className="size-4" />;
-      case 'service':
+      case "service":
         return <Megaphone className="size-4" />;
-      case 'community':
+      case "community":
         return <Users className="size-4" />;
     }
   };
 
   const getTypeBadge = (type: NotificationType) => {
     const variants = {
-      emergency: 'destructive',
-      service: 'default',
-      community: 'secondary',
+      emergency: "destructive",
+      service: "default",
+      community: "secondary",
     } as const;
     const labels = {
-      emergency: 'Khẩn cấp',
-      service: 'Dịch vụ',
-      community: 'Cộng đồng',
+      emergency: "Khẩn cấp",
+      service: "Dịch vụ",
+      community: "Cộng đồng",
     };
     return <Badge variant={variants[type]}>{labels[type]}</Badge>;
   };
@@ -58,7 +63,9 @@ export default function NotificationsManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Quản lý Thông báo</h1>
-          <p className="text-muted-foreground">Tạo và quản lý thông báo hệ thống</p>
+          <p className="text-muted-foreground">
+            Tạo và quản lý thông báo hệ thống
+          </p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -112,7 +119,11 @@ export default function NotificationsManagement() {
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                >
                   Hủy
                 </Button>
                 <Button type="submit">Gửi thông báo</Button>
@@ -132,9 +143,11 @@ export default function NotificationsManagement() {
                     {getTypeIcon(notification.type)}
                   </div>
                   <div>
-                    <CardTitle className="text-base">{notification.title}</CardTitle>
+                    <CardTitle className="text-base">
+                      {notification.title}
+                    </CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {new Date(notification.createdAt).toLocaleString('vi-VN')}
+                      {new Date(notification.createdAt).toLocaleString("vi-VN")}
                     </p>
                   </div>
                 </div>
@@ -146,12 +159,12 @@ export default function NotificationsManagement() {
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Users className="size-4" />
                 <span>
-                  Gửi đến:{' '}
-                  {notification.targetAudience === 'all'
-                    ? 'Tất cả'
-                    : notification.targetAudience === 'users'
-                    ? 'Cư dân'
-                    : 'Quản lý'}
+                  Gửi đến:{" "}
+                  {notification.targetAudience === "all"
+                    ? "Tất cả"
+                    : notification.targetAudience === "users"
+                      ? "Cư dân"
+                      : "Quản lý"}
                 </span>
               </div>
             </CardContent>

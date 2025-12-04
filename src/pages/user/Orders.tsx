@@ -1,25 +1,37 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { mockMenuItems } from '../../data/mockData';
-import { Plus, Minus, ShoppingCart } from 'lucide-react';
-import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
+import { mockMenuItems } from "../../data/mockData";
+import { Plus, Minus, ShoppingCart } from "lucide-react";
+import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '../../components/ui/dialog';
+} from "../../components/ui/dialog";
 
 export default function UserOrders() {
   const [cart, setCart] = useState<{ [key: string]: number }>({});
   const [showCart, setShowCart] = useState(false);
 
   const menuItems = mockMenuItems;
-  const categories = Array.from(new Set(menuItems.map((item) => item.category)));
+  const categories = Array.from(
+    new Set(menuItems.map((item) => item.category)),
+  );
 
   const addToCart = (itemId: string) => {
     setCart({ ...cart, [itemId]: (cart[itemId] || 0) + 1 });
@@ -42,7 +54,7 @@ export default function UserOrders() {
 
   const total = cartItems.reduce(
     (sum, { item, quantity }) => sum + (item?.price || 0) * quantity,
-    0
+    0,
   );
 
   const cartCount = Object.values(cart).reduce((sum, count) => sum + count, 0);
@@ -153,7 +165,10 @@ export default function UserOrders() {
             <div className="space-y-4">
               {cartItems.map(({ item, quantity }) =>
                 item ? (
-                  <div key={item.id} className="flex items-center justify-between">
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between"
+                  >
                     <div className="flex items-center gap-3">
                       <ImageWithFallback
                         src={item.image}
@@ -185,13 +200,15 @@ export default function UserOrders() {
                       </Button>
                     </div>
                   </div>
-                ) : null
+                ) : null,
               )}
 
               <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between">
                   <span>Tổng cộng:</span>
-                  <span className="font-semibold">{total.toLocaleString()} VNĐ</span>
+                  <span className="font-semibold">
+                    {total.toLocaleString()} VNĐ
+                  </span>
                 </div>
                 <Button className="w-full">Đặt hàng</Button>
               </div>
