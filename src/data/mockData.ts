@@ -95,7 +95,7 @@ export const mockNotifications: Notification[] = [
   },
 ];
 
-// Mock Menu Items
+// Mock Menu Items (shared across all sites)
 export const mockMenuItems: MenuItem[] = [
   {
     id: '1',
@@ -105,6 +105,7 @@ export const mockMenuItems: MenuItem[] = [
     category: 'Món chính',
     image: 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=400',
     available: true,
+    siteId: 'site1',
   },
   {
     id: '2',
@@ -114,6 +115,7 @@ export const mockMenuItems: MenuItem[] = [
     category: 'Món chính',
     image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400',
     available: true,
+    siteId: 'site1',
   },
   {
     id: '3',
@@ -123,6 +125,7 @@ export const mockMenuItems: MenuItem[] = [
     category: 'Món chính',
     image: 'https://images.unsplash.com/photo-1569562211093-4ed0d0758f12?w=400',
     available: true,
+    siteId: 'site1',
   },
   {
     id: '4',
@@ -132,6 +135,7 @@ export const mockMenuItems: MenuItem[] = [
     category: 'Đồ uống',
     image: 'https://images.unsplash.com/photo-1525385133512-2f3bdd039054?w=400',
     available: true,
+    siteId: 'site1',
   },
   {
     id: '5',
@@ -141,6 +145,7 @@ export const mockMenuItems: MenuItem[] = [
     category: 'Đồ uống',
     image: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400',
     available: true,
+    siteId: 'site1',
   },
   {
     id: '6',
@@ -150,6 +155,7 @@ export const mockMenuItems: MenuItem[] = [
     category: 'Tráng miệng',
     image: 'https://images.unsplash.com/photo-1587314168485-3236d6710814?w=400',
     available: true,
+    siteId: 'site1',
   },
 ];
 
@@ -159,6 +165,7 @@ export const mockOrders: Order[] = [
     id: 'ORD001',
     userId: '2',
     userName: 'Trần Thị Bình',
+    siteId: 'site1',
     items: [
       { menuItem: mockMenuItems[0], quantity: 2 },
       { menuItem: mockMenuItems[4], quantity: 1 },
@@ -176,6 +183,7 @@ export const mockOrders: Order[] = [
     id: 'ORD002',
     userId: '3',
     userName: 'Lê Minh Cường',
+    siteId: 'site1',
     items: [
       { menuItem: mockMenuItems[1], quantity: 1 },
       { menuItem: mockMenuItems[3], quantity: 2 },
@@ -192,6 +200,7 @@ export const mockOrders: Order[] = [
     id: 'ORD003',
     userId: '4',
     userName: 'Phạm Thu Dung',
+    siteId: 'site1',
     items: [{ menuItem: mockMenuItems[2], quantity: 1 }],
     total: 50000,
     discount: 0,
