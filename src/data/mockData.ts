@@ -607,7 +607,7 @@ export const mockRevenueByService: RevenueByService[] = [
 ];
 
 // Helper function to get rank details
-export const getRankDetails = (rank: string) => {
+export const getRankDetails = (rank?: string) => {
   const ranks = {
     bronze: {
       name: 'Đồng',

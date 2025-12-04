@@ -17,8 +17,8 @@ export default function UserHome() {
   const { currentUser } = useAuth();
 
   if (!currentUser) return null;
-
-  const rankDetails = getRankDetails(currentUser.rank);
+  console.log(currentUser);
+  const rankDetails = getRankDetails(currentUser.ranks);
 
   const services = [
     {
@@ -89,12 +89,12 @@ export default function UserHome() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Tổng chi tiêu</p>
-              <p className="text-lg font-semibold">{currentUser.totalSpent.toLocaleString()} VNĐ</p>
+              <p className="text-lg font-semibold">30000 VNĐ</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Giá trị điểm</p>
               <p className="text-lg font-semibold">
-                {(currentUser.points * rankDetails.pointValue).toLocaleString()} VNĐ
+                {(currentUser.points ?? 0 * rankDetails.pointValue).toLocaleString()} VNĐ
               </p>
             </div>
           </div>

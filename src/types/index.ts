@@ -1,3 +1,5 @@
+export * from './user';
+
 export interface MenuItem {
   id: string;
   name: string;

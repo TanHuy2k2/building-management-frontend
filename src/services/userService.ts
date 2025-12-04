@@ -1,5 +1,6 @@
 import { User } from '../types';
 import { mockUsers } from '../data/mockData';
+import { API_ENDPOINTS, apiRequest } from './api';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -14,15 +15,13 @@ export async function getUsers(): Promise<User[]> {
   return mockUsers;
 }
 
-/**
- * Get user by ID
- * Backend API: GET /api/users/:id
- */
-export async function getUserById(id: string): Promise<User | null> {
-  await delay(200);
-  // TODO: Replace with actual API call
-  // return apiRequest<User>(API_ENDPOINTS.USER_BY_ID(id));
-  return mockUsers.find((user) => user.id === id) || null;
+export async function getUserById(id: string, accessToken: string): Promise<any> {
+  return apiRequest(API_ENDPOINTS.USER_BY_ID(id), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
 }
 
 /**
@@ -41,17 +40,14 @@ export async function loginUser(
   //   body: JSON.stringify({ email, password, role }),
   // });
 
-  const user = mockUsers.find((u) => u.email === email && u.role === role);
+  const user = mockUsers.find((u) => u.email === email && u.roles === role);
   return user || null;
 }
 
-/**
- * Get user profile
- * Backend API: GET /api/users/profile
- */
-export async function getUserProfile(userId: string): Promise<User | null> {
-  await delay(200);
-  // TODO: Replace with actual API call with auth token
-  // return apiRequest<User>('/users/profile');
-  return mockUsers.find((user) => user.id === userId) || null;
+export async function getUserProfile(): Promise<any> {
+  return apiRequest(API_ENDPOINTS.PROFILE, {
+    headers: {
+      Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
+    },
+  });
 }

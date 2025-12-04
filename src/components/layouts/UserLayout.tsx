@@ -36,7 +36,7 @@ export default function UserLayout() {
     { path: '/user/profile', icon: User, label: 'Tài khoản' },
   ];
 
-  const rankDetails = currentUser ? getRankDetails(currentUser.rank) : null;
+  const rankDetails = currentUser ? getRankDetails(currentUser.ranks) : null;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
@@ -44,7 +44,7 @@ export default function UserLayout() {
       <header className="bg-white border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <h1 className="font-semibold">Xin chào, {currentUser?.name}</h1>
+            <h1 className="font-semibold">Xin chào, {currentUser?.fullName}</h1>
             {rankDetails && (
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="outline" className={rankDetails.bgColor}>
