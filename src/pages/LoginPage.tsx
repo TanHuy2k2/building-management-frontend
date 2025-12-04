@@ -5,25 +5,31 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Building2, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { loginApi } from '../services/authService';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [managerEmail, setManagerEmail] = useState('manager@example.com');
-  const [userEmail, setUserEmail] = useState('user@example.com');
+  const [userEmail, setUserEmail] = useState('');
+  const [userPassword, setUserPassword] = useState('');
 
-  const handleManagerLogin = (e: React.FormEvent) => {
+  const handleUserLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    login(managerEmail, 'manager');
-    navigate('/manager');
-  };
+    try {
+      const response: any = await loginApi(userEmail, userPassword);
 
-  const handleUserLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    login(userEmail, 'user');
-    navigate('/user');
+      sessionStorage.setItem('access_token', response.data.accessToken);
+      localStorage.setItem('refresh_token', response.data.refreshToken);
+
+      login();
+
+      if (response.data.user.roles === 'user') return navigate('/user');
+      return navigate('/manager');
+    } catch (error: any) {
+      alert(error.message || 'Đăng nhập thất bại');
+    }
   };
 
   return (
@@ -35,17 +41,14 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="user" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-1">
               <TabsTrigger value="user">
                 <Users className="size-4 mr-2" />
                 Cư Dân
               </TabsTrigger>
-              <TabsTrigger value="manager">
-                <Building2 className="size-4 mr-2" />
-                Quản Lý
-              </TabsTrigger>
             </TabsList>
 
+            {/* USER LOGIN */}
             <TabsContent value="user">
               <form onSubmit={handleUserLogin} className="space-y-4">
                 <div className="space-y-2">
@@ -53,59 +56,31 @@ export default function LoginPage() {
                   <Input
                     id="user-email"
                     type="email"
-                    placeholder="user@example.com"
+                    placeholder="Email"
                     value={userEmail}
                     onChange={(e) => setUserEmail(e.target.value)}
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="user-password">Mật khẩu</Label>
                   <Input
                     id="user-password"
                     type="password"
                     placeholder="••••••••"
-                    defaultValue="password"
+                    value={userPassword}
+                    onChange={(e) => setUserPassword(e.target.value)}
                     required
                   />
                 </div>
+
                 <Button type="submit" className="w-full">
                   Đăng nhập
                 </Button>
+
                 <p className="text-sm text-muted-foreground text-center">
                   Demo: user@example.com / password
-                </p>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="manager">
-              <form onSubmit={handleManagerLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="manager-email">Email</Label>
-                  <Input
-                    id="manager-email"
-                    type="email"
-                    placeholder="manager@example.com"
-                    value={managerEmail}
-                    onChange={(e) => setManagerEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="manager-password">Mật khẩu</Label>
-                  <Input
-                    id="manager-password"
-                    type="password"
-                    placeholder="••••••••"
-                    defaultValue="password"
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full">
-                  Đăng nhập
-                </Button>
-                <p className="text-sm text-muted-foreground text-center">
-                  Demo: manager@example.com / password
                 </p>
               </form>
             </TabsContent>

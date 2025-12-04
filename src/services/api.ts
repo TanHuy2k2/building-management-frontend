@@ -1,33 +1,18 @@
-// API Base Configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = process.env.BE_API_URL;
+// const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Simulate API delay for realistic experience
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// Generic API request handler
 export async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  // Simulate network delay
-  await delay(300);
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API Error: ${response.status} - ${errorText}`);
+  }
 
-  // TODO: Replace with actual fetch when backend is ready
-  // const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-  //   ...options,
-  //   headers: {
-  //     'Content-Type': 'application/json',
-  //     ...options?.headers,
-  //   },
-  // });
-  //
-  // if (!response.ok) {
-  //   throw new Error(`API Error: ${response.statusText}`);
-  // }
-  //
-  // return response.json();
-
-  throw new Error('API request not implemented yet. Using mock data.');
+  return response.json();
 }
 
-// API endpoints
 export const API_ENDPOINTS = {
   // Auth
   LOGIN: '/auth/login',
@@ -35,7 +20,8 @@ export const API_ENDPOINTS = {
 
   // Users
   USERS: '/users',
-  USER_BY_ID: (id: string) => `/users/${id}`,
+  USER_BY_ID: (id: string) => `/users/${id}/detail`,
+  PROFILE: '/users/profile',
 
   // Orders
   ORDERS: '/orders',

@@ -1,10 +1,10 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 import { User } from '../types';
-import { mockUsers } from '../data/mockData';
+import { getUserProfile } from '../services/userService';
 
 interface AuthContextType {
   currentUser: User | null;
-  login: (email: string, role: 'manager' | 'user') => void;
+  login: () => void;
   logout: () => void;
 }
 
@@ -13,11 +13,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  const login = (email: string, role: 'manager' | 'user') => {
-    // Find user by email and role
-    const user = mockUsers.find((u) => u.email === email && u.role === role);
-    if (user) {
-      setCurrentUser(user);
+  const login = async () => {
+    const response = await getUserProfile();
+    if (response.success) {
+      setCurrentUser(response.data);
     }
   };
 
