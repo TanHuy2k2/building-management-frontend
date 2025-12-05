@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { User } from '../types';
+import { ResponseInterface, User } from '../types';
 import { getUserProfile } from '../services/userService';
 
 interface AuthContextType {
@@ -14,10 +14,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const login = async () => {
     try {
-      const response = await getUserProfile();
+      const response: ResponseInterface = await getUserProfile();
       if (response.success) {
         setCurrentUser(response.data);
       }
+
+      return response.data.user.roles;
     } catch (error) {
       console.error('Failed to load user profile on login attempt:', error);
     }
