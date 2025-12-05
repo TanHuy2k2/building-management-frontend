@@ -10,6 +10,13 @@ export enum UserRank {
   PLATINUM = 'platinum',
 }
 
+export enum RankDiscount {
+  BRONZE = 0,
+  SILVER = 2,
+  GOLD = 5,
+  PLATINUM = 10,
+}
+
 export enum ActiveStatus {
   ACTIVE = 'active',
   INACTIVE = 'inactive',

@@ -2,14 +2,11 @@ import { User } from '../types';
 import { mockUsers } from '../data/mockData';
 import { API_ENDPOINTS, apiRequest } from './api';
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 /**
  * Get all users
  * Backend API: GET /api/users
  */
 export async function getUsers(): Promise<User[]> {
-  await delay(300);
   // TODO: Replace with actual API call
   // return apiRequest<User[]>(API_ENDPOINTS.USERS);
   return mockUsers;
@@ -33,7 +30,6 @@ export async function loginUser(
   password: string,
   role: 'manager' | 'user',
 ): Promise<User | null> {
-  await delay(500);
   // TODO: Replace with actual API call
   // return apiRequest<{ user: User; token: string }>(API_ENDPOINTS.LOGIN, {
   //   method: 'POST',
