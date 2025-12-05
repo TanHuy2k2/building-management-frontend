@@ -12,7 +12,7 @@ export async function apiRequest<T>(endpoint: string, options?: RequestInit): Pr
 export const API_ENDPOINTS = {
   // Auth
   LOGIN: '/auth/login',
-  REGISTER: 'auth/register',
+  REGISTER: '/auth/register',
   LOGOUT: '/auth/logout',
 
   // Users

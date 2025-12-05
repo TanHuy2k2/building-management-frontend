@@ -12,13 +12,14 @@ export async function loginApi(email: string, password: string): Promise<Respons
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
+    const idToken = await user.getIdToken();
     const response: ResponseInterface = await apiRequest(API_ENDPOINTS.LOGIN, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${user.getIdToken()}`,
+        Authorization: `Bearer ${idToken}`,
       },
     });
-
+    
     return response;
   } catch (error: any) {
     throw new Error(error.message);

@@ -9,24 +9,8 @@ import { Users, UserPlus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { loginApi, registerApi } from '../services/authService';
 import toast from 'react-hot-toast';
-import { ResponseInterface } from '../types';
-
-// --- START: Mock API for demonstration if not provided ---
-// Note: You must replace this with your actual registerApi
-// const registerApi = async (email, password) => {
-//   console.log(`Attempting to register: ${email}`);
-//   await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-//   // Simulate successful registration
-//   return {
-//     data: {
-//       accessToken: 'mock_access_token_reg',
-//       refreshToken: 'mock_refresh_token_reg',
-//       user: { roles: 'user' },
-//       message: 'Registration successful!'
-//     }
-//   };
-// };
-// --- END: Mock API ---
+import { ResponseInterface, User, UserRole } from '../types';
+import { getUserProfile } from '../services/userService';
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -49,7 +33,6 @@ export default function AuthPage() {
     setIsLoggingIn(true);
     try {
       const response: ResponseInterface = await loginApi(loginEmail, loginPassword);
-
       if (!response.success) {
         toast.error(response.message);
         return;
@@ -57,16 +40,18 @@ export default function AuthPage() {
 
       sessionStorage.setItem('access_token', response.data.accessToken);
       localStorage.setItem('refresh_token', response.data.refreshToken);
+
       login();
       toast.success('Login successful!');
 
-      if (response.data.user.roles === 'user') {
-        return navigate('/user');
+      const responseUser: ResponseInterface = await getUserProfile();
+      if (responseUser.data.roles === UserRole.MANAGER) {
+        return navigate('/manager');
       }
-      return navigate('/manager');
+      return navigate('/user');
     } catch (error: any) {
       const errorMessage =
-        error.response?.message || 'Login failed. Please check your credentials.';
+        error.response?.message || 'Login failed. Please check your email or password.';
       toast.error(errorMessage);
     } finally {
       setIsLoggingIn(false);
@@ -87,8 +72,9 @@ export default function AuthPage() {
       const registerPayload = {
         email: registerEmail,
         username: registerUsername,
-        fullName: registerFullName,
+        full_name: registerFullName,
         password: registerPassword,
+        confirm_password: confirmPassword,
         phone: registerPhone,
       };
 
