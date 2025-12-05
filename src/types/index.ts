@@ -1,4 +1,5 @@
 export * from './user';
+export * from './response';
 
 export interface MenuItem {
   id: string;

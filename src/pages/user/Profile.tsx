@@ -7,35 +7,33 @@ import { Progress } from '../../components/ui/progress';
 
 export default function UserProfile() {
   const { currentUser } = useAuth();
-
+  const currentUser_totalSpent = 10000;
   if (!currentUser) return null;
 
-  const rankDetails = getRankDetails(currentUser.rank);
+  const rankDetails = getRankDetails(currentUser.ranks);
   const userTransactions = mockTransactions.filter((t) => t.userId === currentUser.id);
 
-  // Calculate next rank
   const ranks = [
     { name: 'bronze', min: 0, max: 2000000 },
     { name: 'silver', min: 2000000, max: 5000000 },
     { name: 'gold', min: 5000000, max: 10000000 },
     { name: 'platinum', min: 10000000, max: Infinity },
   ];
-  const currentRankIndex = ranks.findIndex((r) => r.name === currentUser.rank);
+  const currentRankIndex = ranks.findIndex((r) => r.name === currentUser.ranks);
   const nextRank = ranks[currentRankIndex + 1];
   const progressToNextRank = nextRank
-    ? ((currentUser.totalSpent - ranks[currentRankIndex].min) /
-        (nextRank.min - ranks[currentRankIndex].min)) *
+    ? (currentUser_totalSpent -
+        ranks[currentRankIndex].min / (nextRank.min - ranks[currentRankIndex].min)) *
       100
     : 100;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Tài Khoản</h1>
-        <p className="text-muted-foreground">Thông tin cá nhân và hạng thành viên</p>
+        <h1 className="text-2xl font-semibold">Account</h1>
+        <p className="text-muted-foreground">Profile Details</p>
       </div>
 
-      {/* Profile Card */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
@@ -43,7 +41,7 @@ export default function UserProfile() {
               <User className="size-10" />
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-semibold">{currentUser.name}</h2>
+              <h2 className="text-xl font-semibold">{currentUser.fullName}</h2>
               <p className="text-muted-foreground">{currentUser.email}</p>
               <p className="text-muted-foreground">{currentUser.phone}</p>
             </div>
@@ -59,25 +57,25 @@ export default function UserProfile() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm">Điểm tích lũy</CardTitle>
+            <CardTitle className="text-sm">Total points</CardTitle>
             <Award className="size-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold">{currentUser.points}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              ≈ {(currentUser.points * rankDetails.pointValue).toLocaleString()} VNĐ
+              ≈ {(currentUser.points ?? 0 * rankDetails.pointValue).toLocaleString()} VNĐ
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm">Tổng chi tiêu</CardTitle>
+            <CardTitle className="text-sm">Total spent</CardTitle>
             <DollarSign className="size-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold">
-              {(currentUser.totalSpent / 1000000).toFixed(1)}M
+              {(currentUser_totalSpent / 1000000).toFixed(1)}M
             </div>
             <p className="text-xs text-muted-foreground mt-1">VNĐ</p>
           </CardContent>
@@ -85,21 +83,20 @@ export default function UserProfile() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm">Giao dịch</CardTitle>
+            <CardTitle className="text-sm">Transactions</CardTitle>
             <TrendingUp className="size-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold">{userTransactions.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Tổng số</p>
+            <p className="text-xs text-muted-foreground mt-1">Total</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Rank Progress */}
       {nextRank && (
         <Card>
           <CardHeader>
-            <CardTitle>Tiến độ hạng tiếp theo</CardTitle>
+            <CardTitle>Next rank</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between text-sm">
@@ -107,12 +104,12 @@ export default function UserProfile() {
                 {rankDetails.name} → {getRankDetails(nextRank.name).name}
               </span>
               <span>
-                {currentUser.totalSpent.toLocaleString()} / {nextRank.min.toLocaleString()} VNĐ
+                {currentUser_totalSpent.toLocaleString()} / {nextRank.min.toLocaleString()} VNĐ
               </span>
             </div>
             <Progress value={progressToNextRank} />
             <p className="text-sm text-muted-foreground">
-              Còn {(nextRank.min - currentUser.totalSpent).toLocaleString()} VNĐ để lên hạng{' '}
+              Còn {(nextRank.min - currentUser_totalSpent).toLocaleString()} VNĐ để lên hạng{' '}
               {getRankDetails(nextRank.name).name}
             </p>
           </CardContent>

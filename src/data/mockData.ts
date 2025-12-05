@@ -610,7 +610,7 @@ export const mockRevenueByService: RevenueByService[] = [
 export const getRankDetails = (rank?: string) => {
   const ranks = {
     bronze: {
-      name: 'Đồng',
+      name: 'bronze',
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
       pointValue: 1000,
@@ -618,7 +618,7 @@ export const getRankDetails = (rank?: string) => {
       maxSpent: 2000000,
     },
     silver: {
-      name: 'Bạc',
+      name: 'silver',
       color: 'text-gray-600',
       bgColor: 'bg-gray-50',
       pointValue: 1200,
@@ -626,7 +626,7 @@ export const getRankDetails = (rank?: string) => {
       maxSpent: 5000000,
     },
     gold: {
-      name: 'Vàng',
+      name: 'gold',
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-50',
       pointValue: 1400,

@@ -1,34 +1,116 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Users } from 'lucide-react';
+import { Users, UserPlus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { loginApi } from '../services/authService';
+import { loginApi, registerApi } from '../services/authService';
+import toast from 'react-hot-toast';
+import { ResponseInterface } from '../types';
 
-export default function LoginPage() {
+// --- START: Mock API for demonstration if not provided ---
+// Note: You must replace this with your actual registerApi
+// const registerApi = async (email, password) => {
+//   console.log(`Attempting to register: ${email}`);
+//   await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+//   // Simulate successful registration
+//   return {
+//     data: {
+//       accessToken: 'mock_access_token_reg',
+//       refreshToken: 'mock_refresh_token_reg',
+//       user: { roles: 'user' },
+//       message: 'Registration successful!'
+//     }
+//   };
+// };
+// --- END: Mock API ---
+
+export default function AuthPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [userEmail, setUserEmail] = useState('');
-  const [userPassword, setUserPassword] = useState('');
+  // Login
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  // Register
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerUsername, setRegisterUsername] = useState('');
+  const [registerFullName, setRegisterFullName] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [registerPhone, setRegisterPhone] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
 
-  const handleUserLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoggingIn(true);
     try {
-      const response: any = await loginApi(userEmail, userPassword);
+      const response: ResponseInterface = await loginApi(loginEmail, loginPassword);
+
+      if (!response.success) {
+        toast.error(response.message);
+        return;
+      }
 
       sessionStorage.setItem('access_token', response.data.accessToken);
       localStorage.setItem('refresh_token', response.data.refreshToken);
-
       login();
+      toast.success('Login successful!');
 
-      if (response.data.user.roles === 'user') return navigate('/user');
+      if (response.data.user.roles === 'user') {
+        return navigate('/user');
+      }
       return navigate('/manager');
     } catch (error: any) {
-      alert(error.message || 'Đăng nhập thất bại');
+      const errorMessage =
+        error.response?.message || 'Login failed. Please check your credentials.';
+      toast.error(errorMessage);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsRegistering(true);
+    if (registerPassword !== confirmPassword) {
+      toast.error('Passwords do not match.');
+      return;
+    }
+
+    setIsRegistering(true);
+
+    try {
+      const registerPayload = {
+        email: registerEmail,
+        username: registerUsername,
+        fullName: registerFullName,
+        password: registerPassword,
+        phone: registerPhone,
+      };
+
+      const response: ResponseInterface = await registerApi(registerPayload);
+      if (!response.success) {
+        toast.error(response.message);
+        return;
+      }
+
+      toast.success(response.data.message || 'Registration successful! Please log in.');
+      setRegisterEmail('');
+      setRegisterUsername('');
+      setRegisterFullName('');
+      setRegisterPassword('');
+      setConfirmPassword('');
+      setRegisterPhone('');
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || 'Registration failed. Please try again.';
+      toast.error(errorMessage);
+    } finally {
+      setIsRegistering(false);
     }
   };
 
@@ -36,52 +118,131 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle>Hệ Thống Quản Lý Đa Dịch Vụ</CardTitle>
-          <CardDescription>Đăng nhập để tiếp tục</CardDescription>
+          <CardTitle>Building Services Website</CardTitle>
+          <CardDescription>Sign in or create an account to continue.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="user" className="w-full">
-            <TabsList className="grid w-full grid-cols-1">
-              <TabsTrigger value="user">
+          <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">
                 <Users className="size-4 mr-2" />
-                Cư Dân
+                Sign In
+              </TabsTrigger>
+              <TabsTrigger value="register">
+                <UserPlus className="size-4 mr-2" />
+                Sign Up
               </TabsTrigger>
             </TabsList>
 
-            {/* USER LOGIN */}
-            <TabsContent value="user">
-              <form onSubmit={handleUserLogin} className="space-y-4">
+            <TabsContent value="login">
+              <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="user-email">Email</Label>
+                  <Label htmlFor="login-email">Email</Label>
                   <Input
-                    id="user-email"
+                    id="login-email"
                     type="email"
-                    placeholder="Email"
-                    value={userEmail}
-                    onChange={(e) => setUserEmail(e.target.value)}
+                    placeholder="Email address"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="user-password">Mật khẩu</Label>
+                  <Label htmlFor="login-password">Password</Label>
                   <Input
-                    id="user-password"
+                    id="login-password"
                     type="password"
                     placeholder="••••••••"
-                    value={userPassword}
-                    onChange={(e) => setUserPassword(e.target.value)}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
                     required
                   />
                 </div>
 
-                <Button type="submit" className="w-full">
-                  Đăng nhập
+                <Button type="submit" className="w-full" disabled={isLoggingIn}>
+                  {isLoggingIn ? 'Signing In...' : 'Sign In'}
                 </Button>
+              </form>
+            </TabsContent>
 
-                <p className="text-sm text-muted-foreground text-center">
-                  Demo: user@example.com / password
-                </p>
+            <TabsContent value="register">
+              <form onSubmit={handleRegister} className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="register-email">Email</Label>
+                  <Input
+                    id="register-email"
+                    type="email"
+                    placeholder="Your email address"
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="register-username">Username</Label>
+                  <Input
+                    id="register-username"
+                    type="text"
+                    placeholder="Choose a unique username"
+                    value={registerUsername}
+                    onChange={(e) => setRegisterUsername(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="register-fullname">Full Name</Label>
+                  <Input
+                    id="register-fullname"
+                    type="text"
+                    placeholder="Your full name"
+                    value={registerFullName}
+                    onChange={(e) => setRegisterFullName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="register-phone">Phone Number</Label>
+                  <Input
+                    id="register-phone"
+                    type="tel"
+                    placeholder="+84 9x xxx xxxx"
+                    value={registerPhone}
+                    onChange={(e) => setRegisterPhone(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="register-password">Password</Label>
+                  <Input
+                    id="register-password"
+                    type="password"
+                    placeholder="Create a password"
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    placeholder="Re-enter password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <Button type="submit" className="w-full mt-4" disabled={isRegistering}>
+                  {isRegistering ? 'Signing Up...' : 'Sign Up'}
+                </Button>
               </form>
             </TabsContent>
           </Tabs>

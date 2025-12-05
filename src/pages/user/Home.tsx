@@ -17,45 +17,44 @@ export default function UserHome() {
   const { currentUser } = useAuth();
 
   if (!currentUser) return null;
-  console.log(currentUser);
   const rankDetails = getRankDetails(currentUser.ranks);
 
   const services = [
     {
-      title: 'Đặt Món Ăn',
-      description: 'Đặt món từ nhà hàng',
+      title: 'Food Ordering',
+      description: 'Order meals from restaurants',
       icon: ShoppingCart,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
       path: '/user/orders',
     },
     {
-      title: 'Đặt Sân/Phòng',
-      description: 'Đặt sân thể thao, phòng họp',
+      title: 'Facility Booking',
+      description: 'Book sports courts, meeting rooms',
       icon: Calendar,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       path: '/user/reservations',
     },
     {
-      title: 'Bãi Đậu Xe',
-      description: 'Đăng ký chỗ đậu xe',
+      title: 'Parking',
+      description: 'Register for a parking spot',
       icon: ParkingCircle,
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-50',
       path: '/user/parking',
     },
     {
-      title: 'Xe Buýt',
-      description: 'Đặt chỗ xe buýt nội khu',
+      title: 'Shuttle Bus',
+      description: 'Book a seat on the community bus',
       icon: Bus,
       color: 'text-cyan-600',
       bgColor: 'bg-cyan-50',
       path: '/user/bus',
     },
     {
-      title: 'Sự Kiện',
-      description: 'Tham gia sự kiện cộng đồng',
+      title: 'Events',
+      description: 'Join community events',
       icon: PartyPopper,
       color: 'text-pink-600',
       bgColor: 'bg-pink-50',
@@ -65,7 +64,6 @@ export default function UserHome() {
 
   return (
     <div className="space-y-6">
-      {/* Rank Card */}
       <Card className={rankDetails.bgColor}>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -74,25 +72,23 @@ export default function UserHome() {
                 <Crown className={`size-6 ${rankDetails.color}`} />
               </div>
               <div>
-                <CardTitle>Hạng {rankDetails.name}</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {currentUser.points} điểm tích lũy
-                </p>
+                <CardTitle>Rank: {rankDetails.name}</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">{currentUser.points} points</p>
               </div>
             </div>
             <Badge variant="outline" className="bg-white">
-              1 điểm = {rankDetails.pointValue.toLocaleString()} VNĐ
+              1 point = 1000 VNĐ
             </Badge>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-muted-foreground">Tổng chi tiêu</p>
+              <p className="text-sm text-muted-foreground">Total spent</p>
               <p className="text-lg font-semibold">30000 VNĐ</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Giá trị điểm</p>
+              <p className="text-sm text-muted-foreground">Total points</p>
               <p className="text-lg font-semibold">
                 {(currentUser.points ?? 0 * rankDetails.pointValue).toLocaleString()} VNĐ
               </p>
