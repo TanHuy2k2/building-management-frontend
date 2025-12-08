@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -11,6 +11,7 @@ import { loginApi, registerApi } from '../services/authService';
 import toast from 'react-hot-toast';
 import { ResponseInterface, User, UserRole } from '../types';
 import { getUserProfile } from '../services/userService';
+import { getAccessToken } from '../services/tokenService';
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -45,9 +46,10 @@ export default function AuthPage() {
       toast.success('Login successful!');
 
       const responseUser: ResponseInterface = await getUserProfile();
-      if (responseUser.data.roles === UserRole.MANAGER) {
+      if (responseUser.data.role === UserRole.MANAGER) {
         return navigate('/manager');
       }
+
       return navigate('/user');
     } catch (error: any) {
       const errorMessage =
@@ -63,6 +65,8 @@ export default function AuthPage() {
     setIsRegistering(true);
     if (registerPassword !== confirmPassword) {
       toast.error('Passwords do not match.');
+      setIsRegistering(false);
+
       return;
     }
 
@@ -81,6 +85,8 @@ export default function AuthPage() {
       const response: ResponseInterface = await registerApi(registerPayload);
       if (!response.success) {
         toast.error(response.message);
+        setIsRegistering(false);
+
         return;
       }
 
@@ -91,6 +97,8 @@ export default function AuthPage() {
       setRegisterPassword('');
       setConfirmPassword('');
       setRegisterPhone('');
+
+      return navigate('/');
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message || 'Registration failed. Please try again.';
@@ -100,6 +108,20 @@ export default function AuthPage() {
     }
   };
 
+  useEffect(() => {
+    const checkToken = async () => {
+      const accessToken = await getAccessToken();
+      if (accessToken) {
+        const responseUser: ResponseInterface = await getUserProfile();
+        if (responseUser.data.role === UserRole.MANAGER) {
+          return navigate('/manager');
+        }
+
+        return navigate('/user');
+      }
+    };
+    checkToken();
+  });
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">

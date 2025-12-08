@@ -1,10 +1,13 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { ResponseInterface, User } from '../types';
 import { getUserProfile } from '../services/userService';
+import { logoutApi } from '../services/authService';
+import toast from 'react-hot-toast';
+import { getAccessToken } from '../services/tokenService';
 
 interface AuthContextType {
   currentUser: User | null;
-  login: () => void;
+  login: () => Promise<string[] | void>;
   logout: () => void;
 }
 
@@ -18,33 +21,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.success) {
         setCurrentUser(response.data);
       }
-
-      return response.data.user.roles;
     } catch (error) {
-      console.error('Failed to load user profile on login attempt:', error);
+      console.error('Login failed:', error);
     }
   };
 
-  const logout = () => {
-    sessionStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    setCurrentUser(null);
+  const logout = async () => {
+    try {
+      const response: ResponseInterface | null = await logoutApi();
+      if (!response) {
+        toast.error('Cannot logout!');
+
+        return;
+      }
+
+      sessionStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      setCurrentUser(null);
+      window.location.href = '/';
+    } catch (error: any) {
+      toast.error(error.message);
+
+      return;
+    }
   };
+
   useEffect(() => {
     const checkAuthStatus = async () => {
-      const accessToken = sessionStorage.getItem('access_token');
-      if (accessToken) {
-        try {
-          const response = await getUserProfile();
-          if (response.success) {
-            setCurrentUser(response.data);
-          } else {
-            logout();
-          }
-        } catch (error) {
-          console.error('Error fetching user profile on refresh:', error);
-          logout();
+      const token = await getAccessToken();
+      if (!token) return;
+
+      try {
+        const res = await getUserProfile();
+        if (res.success) {
+          setCurrentUser(res.data);
         }
+      } catch (err) {
+        console.error('Auth check failed:', err);
       }
     };
 
@@ -58,8 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
+
   return context;
 }

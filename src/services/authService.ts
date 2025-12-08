@@ -19,7 +19,7 @@ export async function loginApi(email: string, password: string): Promise<Respons
         Authorization: `Bearer ${idToken}`,
       },
     });
-    
+
     return response;
   } catch (error: any) {
     throw new Error(error.message);
@@ -31,6 +31,48 @@ export async function registerApi(data: any): Promise<ResponseInterface> {
     const response: ResponseInterface = await apiRequest(API_ENDPOINTS.REGISTER, {
       method: 'POST',
       body: JSON.stringify(data),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return response;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
+
+export async function refreshTokenApi(): Promise<ResponseInterface | null> {
+  try {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) return null;
+
+    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.REFRESH_TOKEN, {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response?.data?.accessToken) {
+      sessionStorage.setItem('access_token', response.data.accessToken);
+    }
+
+    return response;
+  } catch {
+    return null;
+  }
+}
+
+export async function logoutApi(): Promise<ResponseInterface | null> {
+  try {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) return null;
+
+    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.REGISTER, {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
       headers: {
         'Content-Type': 'application/json',
       },
