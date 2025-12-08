@@ -1,5 +1,4 @@
 const API_BASE_URL = process.env.BE_API_URL;
-// const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -14,6 +13,7 @@ export const API_ENDPOINTS = {
   LOGIN: '/auth/login',
   REGISTER: '/auth/register',
   LOGOUT: '/auth/logout',
+  REFRESH_TOKEN: '/auth/refresh-token',
 
   // Users
   USERS: '/users',
