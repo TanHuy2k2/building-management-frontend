@@ -1,49 +1,58 @@
-import { User } from '../types';
-import { mockUsers } from '../data/mockData';
+import { CreateUserDto, ResponseInterface } from '../types';
 import { API_ENDPOINTS, apiRequest } from './api';
+import { getAccessToken } from '../services/tokenService';
 
-/**
- * Get all users
- * Backend API: GET /api/users
- */
-export async function getUsers(): Promise<User[]> {
-  // TODO: Replace with actual API call
-  // return apiRequest<User[]>(API_ENDPOINTS.USERS);
-  return mockUsers;
-}
+export async function getUsers(): Promise<ResponseInterface> {
+  const token = await getAccessToken();
 
-export async function getUserById(id: string, accessToken: string): Promise<any> {
-  return apiRequest(API_ENDPOINTS.USER_BY_ID(id), {
+  return apiRequest(API_ENDPOINTS.USERS, {
     headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: `Bearer ${token}`,
     },
   });
 }
 
-/**
- * Login user
- * Backend API: POST /api/auth/login
- */
-export async function loginUser(
-  email: string,
-  password: string,
-  role: 'manager' | 'user',
-): Promise<User | null> {
-  // TODO: Replace with actual API call
-  // return apiRequest<{ user: User; token: string }>(API_ENDPOINTS.LOGIN, {
-  //   method: 'POST',
-  //   body: JSON.stringify({ email, password, role }),
-  // });
+export async function getUserById(id: string): Promise<ResponseInterface> {
+  const token = await getAccessToken();
 
-  const user = mockUsers.find((u) => u.email === email && u.roles === role);
-  return user || null;
+  return apiRequest(API_ENDPOINTS.USER_DETAIL_BY_ID(id), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 }
 
-export async function getUserProfile(): Promise<any> {
+export async function getUserProfile(): Promise<ResponseInterface> {
+  const token = await getAccessToken();
+
   return apiRequest(API_ENDPOINTS.PROFILE, {
     headers: {
-      Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function createUser(user: CreateUserDto): Promise<ResponseInterface> {
+  const token = await getAccessToken();
+
+  return apiRequest(API_ENDPOINTS.CREATE_USER, {
+    method: 'POST',
+    body: JSON.stringify(user),
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function updateUser(id: string, formData: FormData): Promise<ResponseInterface> {
+  const token = await getAccessToken();
+
+  return apiRequest(API_ENDPOINTS.USER_BY_ID(id), {
+    method: 'PATCH',
+    body: formData,
+    headers: {
+      Authorization: `Bearer ${token}`,
     },
   });
 }

@@ -17,8 +17,10 @@ export const API_ENDPOINTS = {
 
   // Users
   USERS: '/users',
-  USER_BY_ID: (id: string) => `/users/${id}/detail`,
+  CREATE_USER: '/users/create',
   PROFILE: '/users/profile',
+  USER_BY_ID: (id: string) => `/users/${id}`,
+  USER_DETAIL_BY_ID: (id: string) => `/users/${id}/detail`,
 
   // Orders
   ORDERS: '/orders',
