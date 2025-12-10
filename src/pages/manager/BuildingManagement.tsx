@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { Building, BuildingStatus, CreateBuildingDto, User } from '../../types';
+import { Building, BuildingForm, BuildingStatus, User } from '../../types';
 // Icons
 import {
   Building2,
@@ -23,7 +23,13 @@ import {
   Trash2,
   Home,
 } from 'lucide-react';
-import { createBuildingApi, getAllBuildingApi, getBuildingByIdApi } from '../../services/building';
+import {
+  createBuildingApi,
+  getAllBuildingApi,
+  getBuildingByIdApi,
+  updateBuildingApi,
+  updateBuildingStatusApi,
+} from '../../services/buildingService';
 import toast from 'react-hot-toast';
 import { getManagers, getUserById } from '../../services/userService';
 import {
@@ -41,7 +47,15 @@ export default function BuildingManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [managerMap, setManagerMap] = useState<Record<string, string>>({});
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<CreateBuildingDto>({
+  const [mode, setMode] = useState<'create' | 'edit'>('create');
+  const [form, setForm] = useState<BuildingForm>({
+    name: '',
+    code: '',
+    address: '',
+    manager_id: '',
+  });
+  const [formUpdate, setFormUpdate] = useState<BuildingForm>({
+    id: '',
     name: '',
     code: '',
     address: '',
@@ -77,7 +91,7 @@ export default function BuildingManagement() {
     fetchData();
   }, []);
 
-  const createBuilding = async () => {
+  const createBuilding = async (form: BuildingForm) => {
     const res = await createBuildingApi(form);
     if (!res.success) {
       toast.error(res.message);
@@ -105,6 +119,64 @@ export default function BuildingManagement() {
     }
 
     toast.success('Add building successfully');
+    setOpen(false);
+  };
+
+  const updateBuildingStatus = async (id: string, status: BuildingStatus) => {
+    const res = await updateBuildingStatusApi(id, status);
+    const buildingId = res.data.id;
+    const detailRes = await getBuildingByIdApi(buildingId);
+    if (!detailRes.success) {
+      toast.error(detailRes.message);
+
+      return;
+    }
+
+    const newBuilding = detailRes.data as Building;
+    setBuildings((prev) => {
+      if (!prev) return [newBuilding];
+
+      return prev.map((b) => (b.id === newBuilding.id ? newBuilding : b));
+    });
+
+    toast.success('Update building status successfully');
+    setOpen(false);
+  };
+
+  const updateBuilding = async (id: string, form: BuildingForm) => {
+    const res = await updateBuildingApi(id, form);
+    if (!res.success) {
+      toast.error(res.message);
+
+      return;
+    }
+
+    const buildingId = res.data.id;
+    const detailRes = await getBuildingByIdApi(buildingId);
+    if (!detailRes.success) {
+      toast.error('Created but failed to load building info');
+
+      return;
+    }
+
+    const updatedBuilding = detailRes.data as Building;
+    setBuildings((prev) => {
+      if (!prev) return [updatedBuilding];
+
+      return prev.map((b) => (b.id === updatedBuilding.id ? updatedBuilding : b));
+    });
+
+    if (updatedBuilding.manager_id) {
+      const user = await getUserById(updatedBuilding.manager_id);
+      if (user.success) {
+        setManagerMap((prev) => ({
+          ...prev,
+          [updatedBuilding.manager_id]: user.data.full_name,
+        }));
+      }
+    }
+
+    toast.success('Update building status successfully');
     setOpen(false);
   };
 
@@ -158,6 +230,101 @@ export default function BuildingManagement() {
   return (
     <div className="space-y-6 p-6">
       {/* Header and Controls */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{mode === 'create' ? 'Add New Building' : 'Edit Building'}</DialogTitle>
+            <DialogDescription>Fill in the information below</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Name */}
+            <Input
+              placeholder="Building Name"
+              value={mode === 'create' ? form.name : formUpdate.name}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (mode === 'create') {
+                  setForm((prev) => ({ ...prev, name: value }));
+                } else {
+                  setFormUpdate((prev) => ({ ...prev, name: value }));
+                }
+              }}
+            />
+
+            {/* Code */}
+            <Input
+              placeholder="Code"
+              value={mode === 'create' ? form.code : formUpdate.code}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (mode === 'create') {
+                  setForm((prev) => ({ ...prev, code: value }));
+                } else {
+                  setFormUpdate((prev) => ({ ...prev, code: value }));
+                }
+              }}
+            />
+
+            {/* Address */}
+            <Input
+              placeholder="Address"
+              value={mode === 'create' ? form.address : formUpdate.address}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (mode === 'create') {
+                  setForm((prev) => ({ ...prev, address: value }));
+                } else {
+                  setFormUpdate((prev) => ({ ...prev, address: value }));
+                }
+              }}
+            />
+
+            {/* Manager */}
+            <Select
+              value={mode === 'create' ? form.manager_id : formUpdate.manager_id}
+              onValueChange={(value: any) => {
+                if (mode === 'create') {
+                  setForm((prev) => ({ ...prev, manager_id: value }));
+                } else {
+                  setFormUpdate((prev) => ({ ...prev, manager_id: value }));
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Manager" />
+              </SelectTrigger>
+
+              <SelectContent>
+                {managers.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter className="mt-6">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+
+            <Button
+              onClick={() => {
+                if (mode === 'create') {
+                  createBuilding(form);
+                } else {
+                  const { id, ...data } = formUpdate;
+                  updateBuilding(String(id), data);
+                }
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="flex items-center justify-between flex-wrap gap-4 border-b pb-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Building Management 🏢</h1>
@@ -167,70 +334,14 @@ export default function BuildingManagement() {
           <Button
             variant="outline"
             className="text-green-600  hover:bg-green-700"
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              setMode('create');
+              setOpen(true);
+            }}
           >
             <Plus className="size-4 mr-2" /> Add New Building
           </Button>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Add New Building</DialogTitle>
-                <DialogDescription>Fill in the information below</DialogDescription>
-              </DialogHeader>
 
-              <div className="space-y-4">
-                <Input
-                  placeholder="Building Name"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-
-                <Input
-                  placeholder="Code"
-                  value={form.code}
-                  onChange={(e) => setForm({ ...form, code: e.target.value })}
-                />
-
-                <Input
-                  placeholder="Address"
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                />
-
-                <Select
-                  value={form.manager_id}
-                  onValueChange={(value: string) => setForm({ ...form, manager_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Manager" />
-                  </SelectTrigger>
-
-                  <SelectContent>
-                    {managers.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <DialogFooter className="mt-6">
-                <Button variant="outline" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
-
-                <Button
-                  onClick={() => {
-                    createBuilding();
-                    setOpen(false);
-                  }}
-                >
-                  Save
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
           <Select
             value={filter}
             onValueChange={(value: BuildingStatus | 'all') => setFilter(value)}
@@ -288,8 +399,11 @@ export default function BuildingManagement() {
 
       {/* Building List (Cards) */}
       <div className="grid gap-4">
-        {filteredBuildings.map((building) => (
-          <Card key={building.id} className="shadow-md hover:shadow-xl transition duration-300">
+        {filteredBuildings.map((building, index) => (
+          <Card
+            key={`${building.id}-${index}`}
+            className="shadow-md hover:shadow-xl transition duration-300"
+          >
             <CardContent className="flex items-center justify-between p-6">
               {/* LEFT SIDE - INFO */}
               <div className="flex items-center gap-4">
@@ -334,6 +448,7 @@ export default function BuildingManagement() {
                         size="sm"
                         variant="outline"
                         className="w-[150px] h-[36px] flex items-center justify-center gap-1 text-green-600"
+                        onClick={() => updateBuildingStatus(building.id, BuildingStatus.ACTIVE)}
                       >
                         <CheckSquare className="size-4" />
                         Activate
@@ -343,6 +458,7 @@ export default function BuildingManagement() {
                         size="sm"
                         variant="outline"
                         className="w-[150px] h-[36px] flex items-center justify-center gap-1 text-yellow-600"
+                        onClick={() => updateBuildingStatus(building.id, BuildingStatus.INACTIVE)}
                       >
                         <Wrench className="size-4" />
                         Inactive
@@ -357,7 +473,17 @@ export default function BuildingManagement() {
                       variant="secondary"
                       title="Edit"
                       className="w-9 h-9"
-                      onClick={() => alert(`Edit ${building.id}`)}
+                      onClick={() => {
+                        setMode('edit');
+                        setFormUpdate({
+                          id: building.id,
+                          name: building.name,
+                          code: building.code,
+                          address: building.address,
+                          manager_id: building.manager_id,
+                        });
+                        setOpen(true);
+                      }}
                     >
                       <Edit className="size-4" />
                     </Button>

@@ -27,6 +27,8 @@ export const API_ENDPOINTS = {
   BUILDINGS: '/buildings',
   BUILDING_BY_ID: (id: string) => `/buildings/${id}`,
   CREATE_BUILDING: '/buildings/create',
+  UPDATE_BUILDING: (id: string) => `/buildings/update/${id}`,
+  UPDATE_BUILDING_STATUS: (id: string) => `/buildings/update-status/${id}`,
 
   // Orders
   ORDERS: '/orders',
