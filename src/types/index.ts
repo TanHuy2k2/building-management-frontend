@@ -1,5 +1,6 @@
 export * from './user';
 export * from './response';
+export * from './building';
 
 export interface MenuItem {
   id: string;

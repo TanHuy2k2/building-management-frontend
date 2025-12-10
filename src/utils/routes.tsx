@@ -23,6 +23,7 @@ import UserBus from '../pages/user/Bus';
 import UserEvents from '../pages/user/Events';
 import UserProfile from '../pages/user/Profile';
 import UserNotifications from '../pages/user/Notifications';
+import BuildingManagement from '../pages/manager/BuildingManagement';
 
 export const router = createBrowserRouter([
   {
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
     Component: ManagerLayout,
     children: [
       { index: true, Component: ManagerDashboard },
+      { path: 'buildings', Component: BuildingManagement },
       { path: 'notifications', Component: NotificationsManagement },
       { path: 'orders', Component: OrdersManagement },
       { path: 'reservations', Component: ReservationsManagement },
