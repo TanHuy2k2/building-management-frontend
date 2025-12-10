@@ -16,9 +16,14 @@ export interface Building {
   updated_by?: string | null;
 }
 
-export interface CreateBuildingDto {
+export interface BuildingForm {
+  id?: string;
   name: string;
   code: string;
   address: string;
   manager_id: string;
+}
+
+export interface UpdateBuildingStatusDto {
+  status: BuildingStatus;
 }
