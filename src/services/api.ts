@@ -21,6 +21,12 @@ export const API_ENDPOINTS = {
   PROFILE: '/users/profile',
   USER_BY_ID: (id: string) => `/users/${id}`,
   USER_DETAIL_BY_ID: (id: string) => `/users/${id}/detail`,
+  USERS_BY_ROLE: (role: string) => `/users?role=${role}`,
+
+  // Buildings
+  BUILDINGS: '/buildings',
+  BUILDING_BY_ID: (id: string) => `/buildings/${id}`,
+  CREATE_BUILDING: '/buildings/create',
 
   // Orders
   ORDERS: '/orders',

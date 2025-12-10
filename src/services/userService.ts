@@ -12,6 +12,16 @@ export async function getUsers(): Promise<ResponseInterface> {
   });
 }
 
+export async function getManagers(): Promise<ResponseInterface> {
+  const accessToken = await getAccessToken();
+  return apiRequest(API_ENDPOINTS.USERS_BY_ROLE('manager'), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}
+
 export async function getUserById(id: string): Promise<ResponseInterface> {
   const token = await getAccessToken();
 
