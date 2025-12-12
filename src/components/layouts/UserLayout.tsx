@@ -26,17 +26,17 @@ export default function UserLayout() {
   };
 
   const menuItems = [
-    { path: '/user', icon: Home, label: 'Trang chủ' },
-    { path: '/user/orders', icon: ShoppingCart, label: 'Đặt món' },
-    { path: '/user/reservations', icon: Calendar, label: 'Đặt chỗ' },
-    { path: '/user/parking', icon: ParkingCircle, label: 'Bãi xe' },
-    { path: '/user/bus', icon: Bus, label: 'Xe buýt' },
-    { path: '/user/events', icon: PartyPopper, label: 'Sự kiện' },
-    { path: '/user/notifications', icon: Bell, label: 'Thông báo' },
-    { path: '/user/profile', icon: User, label: 'Tài khoản' },
+    { path: '/user', icon: Home, label: 'Home' },
+    { path: '/user/orders', icon: ShoppingCart, label: 'Orders' },
+    { path: '/user/reservations', icon: Calendar, label: 'Reservations' },
+    { path: '/user/parking', icon: ParkingCircle, label: 'Parking' },
+    { path: '/user/bus', icon: Bus, label: 'Bus' },
+    { path: '/user/events', icon: PartyPopper, label: 'Events' },
+    { path: '/user/notifications', icon: Bell, label: 'Notifications' },
+    { path: '/user/profile', icon: User, label: 'Profile' },
   ];
 
-  const rankDetails = currentUser ? getRankDetails(currentUser.ranks) : null;
+  const rankDetails = currentUser ? getRankDetails(currentUser.rank) : null;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
@@ -44,13 +44,13 @@ export default function UserLayout() {
       <header className="bg-white border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <h1 className="font-semibold">Xin chào, {currentUser?.fullName}</h1>
+            <h1 className="font-semibold">Welcome, {currentUser?.full_name}</h1>
             {rankDetails && (
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="outline" className={rankDetails.bgColor}>
                   <span className={rankDetails.color}>{rankDetails.name}</span>
                 </Badge>
-                <span className="text-sm text-muted-foreground">{currentUser?.points} điểm</span>
+                <span className="text-sm text-muted-foreground">{currentUser?.points} points</span>
               </div>
             )}
           </div>

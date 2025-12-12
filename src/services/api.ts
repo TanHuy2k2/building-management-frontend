@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
   USERS: '/users',
   CREATE_USER: '/users/create',
   PROFILE: '/users/profile',
+  UPDATE_PASSWORD: '/users/update-password',
   USER_BY_ID: (id: string) => `/users/${id}`,
   USER_DETAIL_BY_ID: (id: string) => `/users/${id}/detail`,
   USERS_BY_ROLE: (role: string) => `/users?role=${role}`,
