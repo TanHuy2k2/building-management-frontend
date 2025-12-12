@@ -1,3 +1,4 @@
+import { UpdatePasswordDto } from './../types/user';
 import { CreateUserDto, ResponseInterface } from '../types';
 import { API_ENDPOINTS, apiRequest } from './api';
 import { getAccessToken } from '../services/tokenService';
@@ -59,6 +60,31 @@ export async function updateUser(id: string, formData: FormData): Promise<Respon
   const token = await getAccessToken();
 
   return apiRequest(API_ENDPOINTS.USER_BY_ID(id), {
+    method: 'PATCH',
+    body: formData,
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function updatePassword(dto: UpdatePasswordDto): Promise<ResponseInterface> {
+  const token = await getAccessToken();
+
+  return apiRequest(API_ENDPOINTS.UPDATE_PASSWORD, {
+    method: 'PATCH',
+    body: JSON.stringify(dto),
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function updateUserProfile(formData: FormData): Promise<ResponseInterface> {
+  const token = await getAccessToken();
+
+  return apiRequest(API_ENDPOINTS.PROFILE, {
     method: 'PATCH',
     body: formData,
     headers: {

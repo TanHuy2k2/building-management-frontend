@@ -74,8 +74,8 @@ export interface User {
   full_name: string;
   phone: string;
   image_url?: string | null;
-  rank?: UserRank;
-  points?: number | null;
+  rank: UserRank;
+  points: number;
   role: UserRole;
   permissions?: string[] | null;
   status: ActiveStatus;
@@ -89,6 +89,11 @@ export interface CreateUserDto extends Pick<
   User,
   'email' | 'username' | 'full_name' | 'phone' | 'role' | 'permissions'
 > {
+  password: string;
+  confirm_password: string;
+}
+
+export interface UpdatePasswordDto {
   password: string;
   confirm_password: string;
 }
