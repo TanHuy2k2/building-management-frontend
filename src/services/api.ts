@@ -31,6 +31,13 @@ export const API_ENDPOINTS = {
   UPDATE_BUILDING: (id: string) => `/buildings/update/${id}`,
   UPDATE_BUILDING_STATUS: (id: string) => `/buildings/update-status/${id}`,
 
+  // Facilities
+  FACILITIES: '/facilities',
+  FACILITY_BY_ID: (id: string) => `/facilities/${id}`,
+  CREATE_FACILITY: '/facilities/create',
+  UPDATE_FACILITY: (id: string) => `/facilities/update/${id}`,
+  UPDATE_FACILITY_STATUS: (id: string) => `/facilities/update-status/${id}`,
+
   // Orders
   ORDERS: '/orders',
   ORDER_BY_ID: (id: string) => `/orders/${id}`,

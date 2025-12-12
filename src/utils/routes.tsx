@@ -24,6 +24,7 @@ import UserEvents from '../pages/user/Events';
 import UserProfile from '../pages/user/Profile';
 import UserNotifications from '../pages/user/Notifications';
 import BuildingManagement from '../pages/manager/BuildingManagement';
+import FacilityManagement from '../pages/manager/FacilityManagement';
 
 export const router = createBrowserRouter([
   {
@@ -44,6 +45,7 @@ export const router = createBrowserRouter([
       { path: 'events', Component: EventsManagement },
       { path: 'users', Component: UsersManagement },
       { path: 'reports', Component: ReportsPage },
+      { path: 'facilities', Component: FacilityManagement },
     ],
   },
   {

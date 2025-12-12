@@ -62,6 +62,8 @@ export default function BuildingManagement() {
     manager_id: '',
   });
   const [managers, setManagers] = useState<User[]>([]);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(5);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -226,6 +228,17 @@ export default function BuildingManagement() {
   const totalBuildings = buildings?.length || 0;
   const activeCount = buildings?.filter((b) => b.status === 'active').length || 0;
   const inactiveCount = buildings?.filter((b) => b.status === 'inactive').length || 0;
+  const totalPages = Math.ceil(filteredBuildings.length / limit);
+  const paginatedBuildings = filteredBuildings.slice((page - 1) * limit, page * limit);
+  const getPaginationNumbers = (page: number, total: number) => {
+    if (total <= 5) return [...Array(total)].map((_, i) => i + 1);
+
+    if (page <= 2) return [1, 2, 3, '...', total];
+
+    if (page >= total - 1) return [1, '...', total - 2, total - 1, total];
+
+    return [1, '...', page - 1, page, page + 1, '...', total];
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -399,7 +412,7 @@ export default function BuildingManagement() {
 
       {/* Building List (Cards) */}
       <div className="grid gap-4">
-        {filteredBuildings.map((building, index) => (
+        {paginatedBuildings.map((building, index) => (
           <Card
             key={`${building.id}-${index}`}
             className="shadow-md hover:shadow-xl transition duration-300"
@@ -502,6 +515,56 @@ export default function BuildingManagement() {
             </CardContent>
           </Card>
         ))}
+      </div>
+      <div className="flex justify-center mt-4 gap-2">
+        {/* Prev */}
+        <Button
+          variant="outline"
+          disabled={page === 1}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+        >
+          Prev
+        </Button>
+
+        {/* Numbers */}
+        <div className="flex gap-2">
+          {getPaginationNumbers(page, totalPages).map((item, idx) => {
+            if (item === '...') {
+              return (
+                <div key={idx} className="px-3 py-1 border rounded-lg text-gray-500">
+                  ...
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={idx}
+                onClick={() => setPage(Number(item))}
+                style={{
+                  backgroundColor: page === item ? 'black' : 'white',
+                  color: page === item ? 'white' : 'black',
+                  padding: '0.25rem 0.75rem',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  transition: 'all 0.2s',
+                }}
+                className={page === item ? '' : 'hover:bg-gray-100'}
+              >
+                {item}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Next */}
+        <Button
+          variant="outline"
+          disabled={page === totalPages}
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+        >
+          Next
+        </Button>
       </div>
 
       {/* No data */}
