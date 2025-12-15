@@ -45,6 +45,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '../../components/ui/dialog';
+import { getChangedFields, removeEmptyFields } from '../../utils/updateFields';
 
 export default function RestaurantManagement() {
   const [buildings, setBuildings] = useState<Building[]>();
@@ -128,27 +129,6 @@ export default function RestaurantManagement() {
     return true;
   };
 
-  function removeEmptyFields(obj: any): any {
-    if (!obj || typeof obj !== 'object') return obj;
-
-    return Object.entries(obj).reduce(
-      (acc, [key, value]) => {
-        if (value === '' || value == null) return acc;
-
-        if (Array.isArray(value) && value.length === 0) return acc;
-
-        if (typeof value === 'object') {
-          const cleaned = removeEmptyFields(value);
-          if (Object.keys(cleaned).length) acc[key] = cleaned;
-        } else {
-          acc[key] = value;
-        }
-        return acc;
-      },
-      Array.isArray(obj) ? [] : ({} as any),
-    );
-  }
-
   // ================= CREATE RESTAURANT =================
   const createRestaurant = async (form: RestaurantForm) => {
     const res = await createRestaurantApi(removeEmptyFields(form));
@@ -168,18 +148,6 @@ export default function RestaurantManagement() {
     toast.success('Add restaurant successfully');
     setOpen(false);
   };
-
-  function getChangedFields(original: Record<string, any>, updated: Record<string, any>) {
-    const result: Record<string, any> = {};
-
-    for (const key in updated) {
-      if (JSON.stringify(updated[key]) !== JSON.stringify(original[key])) {
-        result[key] = updated[key];
-      }
-    }
-
-    return result;
-  }
 
   // ================= UPDATE RESTAURANT =================
   const updateRestaurant = async (id: string, form: RestaurantForm) => {

@@ -37,6 +37,9 @@ import {
 } from '../../services/facilityService';
 import toast from 'react-hot-toast';
 import { getAllBuildingApi, getBuildingByIdApi } from '../../services/buildingService';
+import { ITEMS_PER_PAGE } from '../../utils/constants';
+import { getPaginationNumbers } from '../../utils/pagination';
+import { getChangedFields, removeEmptyFields } from '../../utils/updateFields';
 
 const facilityIcons: Record<FacilityType, JSX.Element> = {
   room: <Building className="w-5 h-5" />,
@@ -63,8 +66,8 @@ export default function FacilityPage() {
   const [buildingMap, setBuildingMap] = useState<Record<string, string>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFacility, setEditingFacility] = useState<Facility | null>(null);
+  const [originalForm, setOriginalForm] = useState<FacilityForm | null>(null);
   const [formData, setFormData] = useState<FacilityForm>(initialFormData);
-  const ITEMS_PER_PAGE = 6;
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -162,9 +165,12 @@ export default function FacilityPage() {
     let res: ResponseInterface;
     if (editingFacility) {
       const { id, building_id, ...data } = formData;
-      res = await updateFacilityApi(formData.id!, data);
+      if (!originalForm) return;
+
+      const payload = removeEmptyFields(getChangedFields(originalForm, data));
+      res = await updateFacilityApi(formData.id!, payload);
     } else {
-      res = await createFacilityApi(formData);
+      res = await createFacilityApi(removeEmptyFields(formData));
     }
 
     if (!res.success) {
@@ -434,7 +440,10 @@ export default function FacilityPage() {
                   }}
                 >
                   <Button
-                    onClick={() => handleEdit(item)}
+                    onClick={() => {
+                      handleEdit(item);
+                      setOriginalForm(item);
+                    }}
                     variant="outline"
                     size="sm"
                     style={{
@@ -499,20 +508,35 @@ export default function FacilityPage() {
               Previous
             </Button>
 
-            {Array.from({ length: totalPages }).map((_, index) => {
-              const page = index + 1;
-              return (
-                <Button
-                  key={page}
-                  size="sm"
-                  variant={page === currentPage ? 'default' : 'outline'}
-                  className={page === currentPage ? 'bg-blue-600 text-white' : ''}
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </Button>
-              );
-            })}
+            <div className="flex gap-2">
+              {getPaginationNumbers(currentPage, totalPages).map((item, idx) => {
+                if (item === '...') {
+                  return (
+                    <div key={idx} className="px-3 py-1 border rounded-lg text-gray-500">
+                      ...
+                    </div>
+                  );
+                }
+
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentPage(Number(item))}
+                    style={{
+                      backgroundColor: currentPage === item ? 'black' : 'white',
+                      color: currentPage === item ? 'white' : 'black',
+                      padding: '0.25rem 0.75rem',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '0.5rem',
+                      transition: 'all 0.2s',
+                    }}
+                    className={currentPage === item ? '' : 'hover:bg-gray-100'}
+                  >
+                    {item}
+                  </button>
+                );
+              })}
+            </div>
 
             <Button
               variant="outline"

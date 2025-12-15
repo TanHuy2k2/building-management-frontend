@@ -40,6 +40,9 @@ import {
   DialogDescription,
   DialogFooter,
 } from '../../components/ui/dialog';
+import { ITEMS_PER_PAGE } from '../../utils/constants';
+import { getPaginationNumbers } from '../../utils/pagination';
+import { getChangedFields, removeEmptyFields } from '../../utils/updateFields';
 
 export default function BuildingManagement() {
   const [buildings, setBuildings] = useState<Building[]>();
@@ -48,6 +51,7 @@ export default function BuildingManagement() {
   const [managerMap, setManagerMap] = useState<Record<string, string>>({});
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
+  const [originalForm, setOriginalForm] = useState<BuildingForm | null>(null);
   const [form, setForm] = useState<BuildingForm>({
     name: '',
     code: '',
@@ -63,7 +67,6 @@ export default function BuildingManagement() {
   });
   const [managers, setManagers] = useState<User[]>([]);
   const [page, setPage] = useState(1);
-  const [limit] = useState(5);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -94,7 +97,7 @@ export default function BuildingManagement() {
   }, []);
 
   const createBuilding = async (form: BuildingForm) => {
-    const res = await createBuildingApi(form);
+    const res = await createBuildingApi(removeEmptyFields(form));
     if (!res.success) {
       toast.error(res.message);
 
@@ -146,7 +149,10 @@ export default function BuildingManagement() {
   };
 
   const updateBuilding = async (id: string, form: BuildingForm) => {
-    const res = await updateBuildingApi(id, form);
+    if (!originalForm) return;
+
+    const payload = removeEmptyFields(getChangedFields(originalForm, form));
+    const res = await updateBuildingApi(id, payload);
     if (!res.success) {
       toast.error(res.message);
 
@@ -228,17 +234,11 @@ export default function BuildingManagement() {
   const totalBuildings = buildings?.length || 0;
   const activeCount = buildings?.filter((b) => b.status === 'active').length || 0;
   const inactiveCount = buildings?.filter((b) => b.status === 'inactive').length || 0;
-  const totalPages = Math.ceil(filteredBuildings.length / limit);
-  const paginatedBuildings = filteredBuildings.slice((page - 1) * limit, page * limit);
-  const getPaginationNumbers = (page: number, total: number) => {
-    if (total <= 5) return [...Array(total)].map((_, i) => i + 1);
-
-    if (page <= 2) return [1, 2, 3, '...', total];
-
-    if (page >= total - 1) return [1, '...', total - 2, total - 1, total];
-
-    return [1, '...', page - 1, page, page + 1, '...', total];
-  };
+  const totalPages = Math.ceil(filteredBuildings.length / ITEMS_PER_PAGE);
+  const paginatedBuildings = filteredBuildings.slice(
+    (page - 1) * ITEMS_PER_PAGE,
+    page * ITEMS_PER_PAGE,
+  );
 
   return (
     <div className="space-y-6 p-6">
@@ -488,6 +488,7 @@ export default function BuildingManagement() {
                       className="w-9 h-9"
                       onClick={() => {
                         setMode('edit');
+                        setOriginalForm(building);
                         setFormUpdate({
                           id: building.id,
                           name: building.name,
