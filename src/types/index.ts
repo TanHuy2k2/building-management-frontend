@@ -2,6 +2,7 @@ export * from './user';
 export * from './response';
 export * from './building';
 export * from './facility';
+export * from './restaurant';
 
 export interface MenuItem {
   id: string;

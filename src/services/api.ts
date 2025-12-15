@@ -38,6 +38,13 @@ export const API_ENDPOINTS = {
   UPDATE_FACILITY: (id: string) => `/facilities/update/${id}`,
   UPDATE_FACILITY_STATUS: (id: string) => `/facilities/update-status/${id}`,
 
+  // Restaurants
+  RESTAURANTS: '/restaurants',
+  RESTAURANT_CREATE: '/restaurants/create',
+  RESTAURANT_BY_ID: (id: string) => `/restaurants/${id}`,
+  RESTAURANT_UPDATE: (id: string) => `/restaurants/update/${id}`,
+  RESTAURANT_UPDATE_STATUS: (id: string) => `/restaurants/update-status/${id}`,
+
   // Orders
   ORDERS: '/orders',
   ORDER_BY_ID: (id: string) => `/orders/${id}`,
