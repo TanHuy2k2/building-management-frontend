@@ -15,6 +15,7 @@ import {
   X,
   Building,
   Landmark,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useState } from 'react';
@@ -42,6 +43,7 @@ export default function ManagerLayout() {
     { path: '/manager/reports', icon: FileText, label: 'Reports' },
     { path: '/manager/buildings', icon: Building, label: 'Buildings' },
     { path: '/manager/facilities', icon: Landmark, label: 'Facilities' },
+    { path: '/manager/restaurants', icon: UtensilsCrossed, label: 'Restaurants' },
   ];
 
   return (
