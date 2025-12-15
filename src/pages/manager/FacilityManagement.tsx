@@ -64,6 +64,8 @@ export default function FacilityPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFacility, setEditingFacility] = useState<Facility | null>(null);
   const [formData, setFormData] = useState<FacilityForm>(initialFormData);
+  const ITEMS_PER_PAGE = 6;
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchData();
@@ -109,6 +111,13 @@ export default function FacilityPage() {
     return matchBuilding && matchStatus && matchSearch;
   });
 
+  const totalPages = Math.ceil(filteredFacilities.length / ITEMS_PER_PAGE);
+
+  const paginatedFacilities = filteredFacilities.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
+  );
+
   const handleAdd = () => {
     setEditingFacility(null);
     setFormData({ ...initialFormData, building_id: buildings[0]?.id || '' });
@@ -123,8 +132,7 @@ export default function FacilityPage() {
     }
 
     setEditingFacility(facility);
-    const { building_id, status, created_by, created_at, updated_at, updated_by, ...data } =
-      facility;
+    const { status, created_by, created_at, updated_at, updated_by, ...data } = facility;
     setFormData(data);
     setDialogOpen(true);
   };
@@ -153,7 +161,7 @@ export default function FacilityPage() {
   const handleSave = async () => {
     let res: ResponseInterface;
     if (editingFacility) {
-      const { id, ...data } = formData;
+      const { id, building_id, ...data } = formData;
       res = await updateFacilityApi(formData.id!, data);
     } else {
       res = await createFacilityApi(formData);
@@ -257,7 +265,7 @@ export default function FacilityPage() {
             gap: '1.5rem',
           }}
         >
-          {filteredFacilities.map((item) => (
+          {paginatedFacilities.map((item) => (
             <Card
               key={item.id}
               style={{
@@ -480,6 +488,43 @@ export default function FacilityPage() {
           </div>
         )}
 
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => p - 1)}
+            >
+              Previous
+            </Button>
+
+            {Array.from({ length: totalPages }).map((_, index) => {
+              const page = index + 1;
+              return (
+                <Button
+                  key={page}
+                  size="sm"
+                  variant={page === currentPage ? 'default' : 'outline'}
+                  className={page === currentPage ? 'bg-blue-600 text-white' : ''}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </Button>
+              );
+            })}
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        )}
+
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -604,6 +649,7 @@ export default function FacilityPage() {
                       })
                     }
                     placeholder="Zone A"
+                    disabled={!!editingFacility}
                   />
                 </div>
                 <div className="grid gap-2">
@@ -617,6 +663,7 @@ export default function FacilityPage() {
                       })
                     }
                     placeholder="2"
+                    disabled={!!editingFacility}
                   />
                 </div>
                 <div className="grid gap-2">
@@ -632,6 +679,7 @@ export default function FacilityPage() {
                         },
                       })
                     }
+                    disabled={!!editingFacility}
                   >
                     <SelectTrigger>
                       <SelectValue />
