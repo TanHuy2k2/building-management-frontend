@@ -38,6 +38,9 @@ export const API_ENDPOINTS = {
   UPDATE_FACILITY: (id: string) => `/facilities/update/${id}`,
   UPDATE_FACILITY_STATUS: (id: string) => `/facilities/update-status/${id}`,
 
+  // Reservations
+  RESERVATIONS: '/facility_reservations',
+
   // Restaurants
   RESTAURANTS: '/restaurants',
   RESTAURANT_CREATE: '/restaurants/create',
@@ -54,12 +57,6 @@ export const API_ENDPOINTS = {
   // Menu
   MENU_ITEMS: '/menu',
   MENU_ITEM_BY_ID: (id: string) => `/menu/${id}`,
-
-  // Reservations
-  RESERVATIONS: '/reservations',
-  RESERVATION_BY_ID: (id: string) => `/reservations/${id}`,
-  CREATE_RESERVATION: '/reservations',
-  UPDATE_RESERVATION_STATUS: (id: string) => `/reservations/${id}/status`,
 
   // Parking
   PARKING_SLOTS: '/parking/slots',

@@ -35,7 +35,6 @@ export default function ManagerLayout() {
     { path: '/manager', icon: LayoutDashboard, label: 'Overview' },
     { path: '/manager/notifications', icon: Bell, label: 'Notifications' },
     { path: '/manager/orders', icon: ShoppingCart, label: 'Orders' },
-    { path: '/manager/reservations', icon: Calendar, label: 'Reservations' },
     { path: '/manager/parking', icon: ParkingCircle, label: 'Parking' },
     { path: '/manager/bus', icon: Bus, label: 'Shuttle Bus' },
     { path: '/manager/events', icon: PartyPopper, label: 'Events' },
@@ -43,6 +42,7 @@ export default function ManagerLayout() {
     { path: '/manager/reports', icon: FileText, label: 'Reports' },
     { path: '/manager/buildings', icon: Building, label: 'Buildings' },
     { path: '/manager/facilities', icon: Landmark, label: 'Facilities' },
+    { path: '/manager/reservations', icon: Calendar, label: 'Reservations' },
     { path: '/manager/restaurants', icon: UtensilsCrossed, label: 'Restaurants' },
   ];
 

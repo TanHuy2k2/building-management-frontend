@@ -7,7 +7,7 @@ import UserLayout from '../components/layouts/UserLayout';
 import ManagerDashboard from '../pages/manager/Dashboard';
 import NotificationsManagement from '../pages/manager/NotificationsManagement';
 import OrdersManagement from '../pages/manager/OrdersManagement';
-import ReservationsManagement from '../pages/manager/ReservationsManagement';
+import ReservationManagement from '../pages/manager/ReservationManagement';
 import ParkingManagement from '../pages/manager/ParkingManagement';
 import BusManagement from '../pages/manager/BusManagement';
 import EventsManagement from '../pages/manager/EventsManagement';
@@ -40,13 +40,13 @@ export const router = createBrowserRouter([
       { path: 'buildings', Component: BuildingManagement },
       { path: 'notifications', Component: NotificationsManagement },
       { path: 'orders', Component: OrdersManagement },
-      { path: 'reservations', Component: ReservationsManagement },
       { path: 'parking', Component: ParkingManagement },
       { path: 'bus', Component: BusManagement },
       { path: 'events', Component: EventsManagement },
       { path: 'users', Component: UsersManagement },
       { path: 'reports', Component: ReportsPage },
       { path: 'facilities', Component: FacilityManagement },
+      { path: 'reservations', Component: ReservationManagement },
       { path: 'restaurants', Component: RestaurantManagement },
     ],
   },
