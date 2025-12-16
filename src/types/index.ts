@@ -3,6 +3,7 @@ export * from './response';
 export * from './building';
 export * from './facility';
 export * from './restaurant';
+export * from './facilityReservation';
 
 export interface MenuItem {
   id: string;
