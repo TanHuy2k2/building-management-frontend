@@ -44,6 +44,7 @@ export const API_ENDPOINTS = {
   // Restaurants
   RESTAURANTS: '/restaurants',
   RESTAURANT_CREATE: '/restaurants/create',
+  RESTAURANT_STATS: '/restaurants/stats',
   RESTAURANT_BY_ID: (id: string) => `/restaurants/${id}`,
   RESTAURANT_UPDATE: (id: string) => `/restaurants/update/${id}`,
   RESTAURANT_UPDATE_STATUS: (id: string) => `/restaurants/update-status/${id}`,

@@ -1,12 +1,34 @@
-import { ResponseInterface, RestaurantForm, UpdateStatusDto } from '../types';
+import { buildQuery } from './../utils/query';
+import { GetRestaurantsParams, ResponseInterface, RestaurantForm, UpdateStatusDto } from '../types';
 import { API_ENDPOINTS, apiRequest } from './api';
 import { getAccessToken } from './tokenService';
 
 // Get all restaurants
-export async function getAllRestaurantsApi(): Promise<ResponseInterface> {
+export async function getAllRestaurantsApi(
+  params?: GetRestaurantsParams,
+): Promise<ResponseInterface> {
   try {
     const token = await getAccessToken();
-    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.RESTAURANTS, {
+    const query = params ? buildQuery(params) : '';
+    const url = query ? `${API_ENDPOINTS.RESTAURANTS}?${query}` : API_ENDPOINTS.RESTAURANTS;
+    const response: ResponseInterface = await apiRequest(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
+
+// Get all restaurants
+export async function getAllRestaurantsStatsApi(): Promise<ResponseInterface> {
+  try {
+    const token = await getAccessToken();
+    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.RESTAURANT_STATS, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,

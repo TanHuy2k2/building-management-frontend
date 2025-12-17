@@ -13,6 +13,8 @@ import {
 import {
   Building,
   BuildingStatus,
+  GetRestaurantsParams,
+  OrderDirection,
   Restaurant,
   RestaurantForm,
   RestaurantStatus,
@@ -35,6 +37,7 @@ import {
   createRestaurantApi,
   updateRestaurantApi,
   updateRestaurantStatusApi,
+  getAllRestaurantsStatsApi,
 } from '../../services/restaurantService';
 import toast from 'react-hot-toast';
 import {
@@ -46,14 +49,26 @@ import {
   DialogFooter,
 } from '../../components/ui/dialog';
 import { getChangedFields, removeEmptyFields } from '../../utils/updateFields';
+import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
+import { Command, CommandInput, CommandItem, CommandList } from '../../components/ui/command';
+import { Check } from 'lucide-react';
+import {
+  DEFAULT_ORDER_BY,
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_TOTAL,
+  LIST_ITEMS_PER_PAGE,
+} from '../../utils/constants';
+import { getPaginationNumbers } from '../../utils/pagination';
 
 export default function RestaurantManagement() {
   const [buildings, setBuildings] = useState<Building[]>();
   const [buildingMap, setBuildingMap] = useState<Record<string, string>>({});
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [filterStatus, setFilterStatus] = useState<RestaurantStatus | 'all'>('all');
-  const [filterBuilding, setFilterBuilding] = useState<string>('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [restaurantStats, setRestaurantStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+  });
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
   const [originalForm, setOriginalForm] = useState<RestaurantForm | null>(null);
@@ -75,40 +90,85 @@ export default function RestaurantManagement() {
       zalo: '',
     },
   });
+  const [filters, setFilters] = useState({ status: 'all', building_id: '', searchTerm: '' });
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(DEFAULT_PAGE);
+  const [totalPage, setTotalPage] = useState(DEFAULT_PAGE_TOTAL);
+  const [orderBy, setOrderBy] = useState(DEFAULT_ORDER_BY);
+  const [order, setOrder] = useState<OrderDirection>(OrderDirection.DESCENDING);
+  const selectedBuildingName = filters.building_id
+    ? buildings?.find((b) => b.id === filters.building_id)?.name
+    : 'All buildings';
 
-  // ================= FETCH BUILDINGS + RESTAURANTS =================
+  const fetchData = async () => {
+    const [buildingRes, restaurantStatRes] = await Promise.all([
+      getAllBuildingApi(),
+      getAllRestaurantsStatsApi(),
+    ]);
+
+    // BUILDINGS
+    if (buildingRes && !buildingRes.success) {
+      toast.error(buildingRes.message);
+      return;
+    }
+    const dataBuildings = buildingRes.data ?? [];
+    setBuildings(dataBuildings);
+    const map: Record<string, string> = {};
+    dataBuildings.forEach((b: Building) => (map[b.id] = b.name));
+    setBuildingMap(map);
+
+    // STATS
+    if (!restaurantStatRes.success) {
+      toast.error(restaurantStatRes.message);
+      return;
+    }
+    setRestaurantStats(restaurantStatRes.data);
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      const [buildingRes, restaurantRes] = await Promise.all([
-        getAllBuildingApi(),
-        getAllRestaurantsApi(),
-      ]);
-
-      // BUILDINGS
-      if (buildingRes && !buildingRes.success) {
-        toast.error(buildingRes.message);
-        return;
-      }
-      const dataBuildings = (buildingRes.data ?? []) as Building[];
-      setBuildings(dataBuildings);
-
-      const map: Record<string, string> = {};
-      dataBuildings.forEach((b) => {
-        map[b.id] = b.name;
-      });
-      setBuildingMap(map);
-
-      // RESTAURANTS
-      if (!restaurantRes.success) {
-        toast.error(restaurantRes.message);
-        return;
-      }
-
-      setRestaurants(restaurantRes.data);
-    };
-
     fetchData();
   }, []);
+
+  const fetchRestaurants = async (p: number = page) => {
+    if (loading) return;
+    setLoading(true);
+
+    try {
+      const effectiveOrder = filters.searchTerm ? OrderDirection.ASCENDING : order;
+      const params: GetRestaurantsParams = {
+        ...(filters.status && filters.status !== 'all' ? { status: filters.status } : {}),
+        ...(filters.building_id ? { building_id: filters.building_id } : {}),
+        ...(filters.searchTerm ? { name: filters.searchTerm } : {}),
+        page: p,
+        page_size: LIST_ITEMS_PER_PAGE,
+        ...(orderBy ? { order_by: orderBy } : {}),
+        ...(effectiveOrder ? { order: effectiveOrder } : {}),
+      };
+
+      const res = await getAllRestaurantsApi(params);
+      if (!res.success) {
+        toast.error(res.message);
+        return;
+      }
+
+      setRestaurants(res.data.restaurants);
+      setTotalPage(res.data.pagination.total_page);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ================= FETCH RESTAURANTS WHEN FILTER/SEARCH CHANGES =================
+  useEffect(() => {
+    setPage(DEFAULT_PAGE);
+    fetchRestaurants(DEFAULT_PAGE);
+  }, [filters]);
+
+  useEffect(() => {
+    fetchRestaurants();
+  }, [page]);
 
   const validateForm = (form: RestaurantForm) => {
     if (!form.name || !form.building_id || !form.floor) {
@@ -143,8 +203,10 @@ export default function RestaurantManagement() {
       return;
     }
 
-    const newRestaurant = detail.data as Restaurant;
-    setRestaurants((prev) => [newRestaurant, ...(prev ?? [])]);
+    setFilters({ status: 'all', building_id: '', searchTerm: '' });
+    setPage(DEFAULT_PAGE);
+    await fetchData();
+    await fetchRestaurants(DEFAULT_PAGE);
     toast.success('Add restaurant successfully');
     setOpen(false);
   };
@@ -191,6 +253,7 @@ export default function RestaurantManagement() {
     const updated = detail.data as Restaurant;
     setRestaurants((prev) => (prev ?? []).map((r) => (r.id === updated.id ? updated : r)));
     toast.success('Update status successfully');
+    fetchData();
   };
 
   // ================= STATUS BADGE =================
@@ -217,20 +280,6 @@ export default function RestaurantManagement() {
     );
   };
 
-  // ================= FILTER + SEARCH =================
-  const filteredRestaurants = restaurants?.filter((r) => {
-    const matchesStatus = filterStatus === 'all' || r.status === (filterStatus as any);
-    const matchesBuilding = !filterBuilding || r.building_id === filterBuilding;
-
-    const q = searchTerm.trim().toLowerCase();
-    const nameMatch = r.name?.toLowerCase().includes(q);
-    const buildingName = buildingMap[r.building_id] ?? '';
-    const buildingMatch = buildingName.toLowerCase().includes(q);
-
-    const matchesSearch = q === '' ? true : nameMatch || buildingMatch;
-    return matchesStatus && matchesBuilding && matchesSearch;
-  });
-
   return (
     <div className="space-y-6 p-6">
       {/* DIALOG for Create / Edit */}
@@ -251,13 +300,15 @@ export default function RestaurantManagement() {
               <Input
                 placeholder="Restaurant Name"
                 value={form.name}
-                onChange={(e) => setForm((p: any) => ({ ...p, name: e.target.value }))}
+                onChange={(e) => setForm((p: RestaurantForm) => ({ ...p, name: e.target.value }))}
               />
 
               <Input
                 placeholder="Description"
                 value={form.description}
-                onChange={(e) => setForm((p: any) => ({ ...p, description: e.target.value }))}
+                onChange={(e) =>
+                  setForm((p: RestaurantForm) => ({ ...p, description: e.target.value }))
+                }
               />
 
               {/* Contact Info */}
@@ -267,7 +318,7 @@ export default function RestaurantManagement() {
                   placeholder="Phone"
                   value={form.contact?.phone ?? ''}
                   onChange={(e) =>
-                    setForm((p: any) => ({
+                    setForm((p: RestaurantForm) => ({
                       ...p,
                       contact: { ...p.contact, phone: e.target.value },
                     }))
@@ -277,7 +328,7 @@ export default function RestaurantManagement() {
                   placeholder="Email"
                   value={form.contact?.email ?? ''}
                   onChange={(e) =>
-                    setForm((p: any) => ({
+                    setForm((p: RestaurantForm) => ({
                       ...p,
                       contact: { ...p.contact, email: e.target.value },
                     }))
@@ -287,7 +338,7 @@ export default function RestaurantManagement() {
                   placeholder="Facebook URL"
                   value={form.contact?.facebook ?? ''}
                   onChange={(e) =>
-                    setForm((p: any) => ({
+                    setForm((p: RestaurantForm) => ({
                       ...p,
                       contact: { ...p.contact, facebook: e.target.value },
                     }))
@@ -297,7 +348,10 @@ export default function RestaurantManagement() {
                   placeholder="Zalo"
                   value={form.contact?.zalo ?? ''}
                   onChange={(e) =>
-                    setForm((p: any) => ({ ...p, contact: { ...p.contact, zalo: e.target.value } }))
+                    setForm((p: RestaurantForm) => ({
+                      ...p,
+                      contact: { ...p.contact, zalo: e.target.value },
+                    }))
                   }
                 />
               </div>
@@ -310,7 +364,7 @@ export default function RestaurantManagement() {
               <Select
                 value={form.building_id}
                 onValueChange={(v: string) =>
-                  mode === 'create' && setForm((p: any) => ({ ...p, building_id: v }))
+                  mode === 'create' && setForm((p: RestaurantForm) => ({ ...p, building_id: v }))
                 }
               >
                 <SelectTrigger disabled={mode === 'edit'}>
@@ -336,7 +390,7 @@ export default function RestaurantManagement() {
                 value={String(form.floor ?? '')}
                 onChange={(e) => {
                   const value = Number(e.target.value);
-                  setForm((p: any) => ({ ...p, floor: value > 0 ? value : 1 }));
+                  setForm((p: RestaurantForm) => ({ ...p, floor: value > 0 ? value : 1 }));
                 }}
               />
 
@@ -463,12 +517,18 @@ export default function RestaurantManagement() {
           </Button>
 
           <Select
-            value={filterStatus}
-            onValueChange={(v: RestaurantStatus | 'all') => setFilterStatus(v)}
+            value={filters.status}
+            onValueChange={(v: RestaurantStatus | 'all') => {
+              setFilters((prev) => ({
+                ...prev,
+                status: v,
+              }));
+            }}
           >
             <SelectTrigger className="w-[180px] h-10 border-gray-300 shadow-sm">
               <SelectValue placeholder="Filter by Status" />
             </SelectTrigger>
+
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
               <SelectItem value="active">Active</SelectItem>
@@ -483,26 +543,64 @@ export default function RestaurantManagement() {
         <div className="relative flex-1 min-w-[240px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
-            placeholder="Search restaurants or building..."
+            placeholder="Search restaurants..."
             className="pl-10 h-10 border-gray-300 shadow-sm"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={filters.searchTerm}
+            onChange={(e) => {
+              const value = e.target.value;
+              setFilters((prev) => ({
+                ...prev,
+                searchTerm: value,
+              }));
+            }}
           />
         </div>
 
         <div className="w-[240px]">
-          <select
-            className="w-full border rounded-lg px-3 py-2 bg-background"
-            value={filterBuilding}
-            onChange={(e) => setFilterBuilding(e.target.value)}
-          >
-            <option value="">All buildings</option>
-            {(buildings ?? []).map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="w-full border rounded-lg px-3 py-2 text-left bg-background">
+                {selectedBuildingName}
+              </button>
+            </PopoverTrigger>
+
+            <PopoverContent className="w-[240px] p-0">
+              <Command>
+                <CommandInput placeholder="Search building..." />
+                <CommandList>
+                  <CommandItem
+                    onSelect={() => {
+                      setFilters((prev) => ({
+                        ...prev,
+                        building_id: '',
+                      }));
+                    }}
+                  >
+                    All buildings
+                  </CommandItem>
+
+                  {(buildings ?? []).map((b) => (
+                    <CommandItem
+                      key={b.id}
+                      onSelect={() => {
+                        setFilters((prev) => ({
+                          ...prev,
+                          building_id: b.id,
+                        }));
+                      }}
+                    >
+                      <Check
+                        className={`mr-2 h-4 w-4 ${
+                          filters.building_id === b.id ? 'opacity-100' : 'opacity-0'
+                        }`}
+                      />
+                      {b.name}
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
@@ -513,7 +611,7 @@ export default function RestaurantManagement() {
             <CardTitle className="text-sm text-muted-foreground">Total Restaurants</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-indigo-600">{restaurants.length}</div>
+            <div className="text-2xl font-bold text-indigo-600">{restaurantStats.total}</div>
           </CardContent>
         </Card>
 
@@ -522,9 +620,7 @@ export default function RestaurantManagement() {
             <CardTitle className="text-sm text-muted-foreground">Active</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {restaurants.filter((r) => r.status === 'active').length}
-            </div>
+            <div className="text-2xl font-bold text-green-600">{restaurantStats.active}</div>
           </CardContent>
         </Card>
 
@@ -534,7 +630,7 @@ export default function RestaurantManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {restaurants.filter((r) => r.status === 'inactive').length}
+              {restaurantStats.total - restaurantStats.active}
             </div>
           </CardContent>
         </Card>
@@ -542,7 +638,7 @@ export default function RestaurantManagement() {
 
       {/* RESTAURANT LIST */}
       <div className="grid gap-4">
-        {filteredRestaurants.map((r, index) => (
+        {restaurants.map((r, index) => (
           <Card
             key={`${r.id}-${index}`}
             className="shadow-md hover:shadow-xl transition duration-300"
@@ -627,7 +723,62 @@ export default function RestaurantManagement() {
         ))}
       </div>
 
-      {filteredRestaurants.length === 0 && (
+      {/* PAGINATION */}
+      <div className="flex justify-center mt-4 gap-2">
+        {/* Prev */}
+        <Button
+          variant="outline"
+          disabled={page === 1}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+        >
+          Prev
+        </Button>
+
+        {/* Numbers */}
+        <div className="flex gap-2">
+          {getPaginationNumbers(page, totalPage).map((item, idx) => {
+            if (item === '...') {
+              return (
+                <div key={idx} className="px-3 py-1 border rounded-lg text-gray-500">
+                  ...
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={idx}
+                onClick={() => setPage(Number(item))}
+                style={{
+                  backgroundColor: page === item ? 'black' : 'white',
+                  color: page === item ? 'white' : 'black',
+                  padding: '0.25rem 0.75rem',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  transition: 'all 0.2s',
+                }}
+                className={page === item ? '' : 'hover:bg-gray-100'}
+              >
+                {item}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Next */}
+        <Button
+          variant="outline"
+          disabled={page === totalPage}
+          onClick={() => setPage((p) => Math.min(totalPage, p + 1))}
+        >
+          Next
+        </Button>
+      </div>
+
+      {/* =================== LOADING INDICATOR =================== */}
+      {loading && <div className="flex justify-center mt-6 text-gray-500">Loading...</div>}
+
+      {restaurants.length === 0 && !loading && (
         <Card>
           <CardContent className="py-12 text-center">
             <Utensils className="size-12 mx-auto text-muted-foreground mb-4" />
@@ -635,9 +786,11 @@ export default function RestaurantManagement() {
             <Button
               variant="link"
               onClick={() => {
-                setFilterStatus('all');
-                setFilterBuilding('');
-                setSearchTerm('');
+                setFilters({
+                  status: 'all',
+                  building_id: '',
+                  searchTerm: '',
+                });
               }}
             >
               View All

@@ -124,7 +124,6 @@ export default function UserProfile() {
 
     setLoading(true);
     try {
-      console.log(formData);
       const res = await updateUserProfile(formData);
 
       if (res.success) {

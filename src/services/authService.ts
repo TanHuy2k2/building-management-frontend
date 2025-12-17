@@ -4,6 +4,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { firebaseConfig } from '../config/firebaseConfig';
+import { getAccessToken } from './tokenService';
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -67,14 +68,16 @@ export async function refreshTokenApi(): Promise<ResponseInterface | null> {
 
 export async function logoutApi(): Promise<ResponseInterface | null> {
   try {
+    const token = await getAccessToken();
     const refreshToken = localStorage.getItem('refresh_token');
     if (!refreshToken) return null;
 
-    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.REGISTER, {
+    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.LOGOUT, {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
     });
 
