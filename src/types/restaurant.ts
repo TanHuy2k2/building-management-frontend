@@ -16,6 +16,11 @@ export interface ContactInfo {
   zalo?: string;
 }
 
+export enum OrderDirection {
+  ASCENDING = 'asc',
+  DESCENDING = 'desc',
+}
+
 export interface Restaurant {
   id: string;
   building_id: string;
@@ -40,4 +45,14 @@ export interface RestaurantForm extends Pick<
 
 export interface UpdateStatusDto {
   status?: RestaurantStatus;
+}
+
+export interface GetRestaurantsParams {
+  name?: string;
+  building_id?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+  order_by?: string;
+  order?: OrderDirection;
 }
