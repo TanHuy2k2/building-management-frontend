@@ -1,11 +1,30 @@
-import { BuildingForm, BuildingStatus, ResponseInterface } from '../types';
+import { BuildingForm, BuildingStatus, GetBuildingParams, ResponseInterface } from '../types';
+import { buildQuery } from '../utils/query';
 import { API_ENDPOINTS, apiRequest } from './api';
 import { getAccessToken } from './tokenService';
 
-export async function getAllBuildingApi(): Promise<ResponseInterface> {
+export async function getAllBuildingApi(params?: GetBuildingParams): Promise<ResponseInterface> {
   try {
     const token = await getAccessToken();
-    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.BUILDINGS, {
+    const query = params ? buildQuery(params) : '';
+    const url = query ? `${API_ENDPOINTS.BUILDINGS}?${query}` : API_ENDPOINTS.BUILDINGS;
+    const response: ResponseInterface = await apiRequest(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
+
+export async function getAllBuildingStatsApi(): Promise<ResponseInterface> {
+  try {
+    const token = await getAccessToken();
+    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.BUILDING_STATS, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,

@@ -16,7 +16,7 @@ import {
   FacilityReservationStatus,
   ReservationView,
 } from '../../types/facilityReservation';
-import { ITEMS_PER_PAGE } from '../../utils/constants';
+import { DEFAULT_PAGE_SIZE } from '../../utils/constants';
 import { getAllFacilityReservationApi } from '../../services/facilityReservationService';
 import toast from 'react-hot-toast';
 import { Building, FacilityType, ResponseInterface } from '../../types';
@@ -95,11 +95,11 @@ export default function ReservationManagement() {
   });
 
   /* ===================== PAGINATION ===================== */
-  const totalPages = Math.ceil(filteredReservations.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredReservations.length / DEFAULT_PAGE_SIZE);
 
   const paginatedReservations = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredReservations.slice(start, start + ITEMS_PER_PAGE);
+    const start = (currentPage - 1) * DEFAULT_PAGE_SIZE;
+    return filteredReservations.slice(start, start + DEFAULT_PAGE_SIZE);
   }, [filteredReservations, currentPage]);
 
   /* ===================== HELPERS ===================== */

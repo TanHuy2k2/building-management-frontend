@@ -30,6 +30,7 @@ export const API_ENDPOINTS = {
   CREATE_BUILDING: '/buildings/create',
   UPDATE_BUILDING: (id: string) => `/buildings/update/${id}`,
   UPDATE_BUILDING_STATUS: (id: string) => `/buildings/update-status/${id}`,
+  BUILDING_STATS: '/buildings/stats',
 
   // Facilities
   FACILITIES: '/facilities',

@@ -37,7 +37,7 @@ import {
 } from '../../services/facilityService';
 import toast from 'react-hot-toast';
 import { getAllBuildingApi, getBuildingByIdApi } from '../../services/buildingService';
-import { ITEMS_PER_PAGE } from '../../utils/constants';
+import { DEFAULT_PAGE_SIZE } from '../../utils/constants';
 import { getPaginationNumbers } from '../../utils/pagination';
 import { getChangedFields, removeEmptyFields } from '../../utils/updateFields';
 
@@ -114,11 +114,11 @@ export default function FacilityPage() {
     return matchBuilding && matchStatus && matchSearch;
   });
 
-  const totalPages = Math.ceil(filteredFacilities.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredFacilities.length / DEFAULT_PAGE_SIZE);
 
   const paginatedFacilities = filteredFacilities.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
+    (currentPage - 1) * DEFAULT_PAGE_SIZE,
+    currentPage * DEFAULT_PAGE_SIZE,
   );
 
   const handleAdd = () => {

@@ -10,7 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { Building, BuildingForm, BuildingStatus, User } from '../../types';
+import {
+  Building,
+  BuildingForm,
+  BuildingStatus,
+  GetBuildingParams,
+  OrderDirection,
+  User,
+} from '../../types';
 // Icons
 import {
   Building2,
@@ -26,6 +33,7 @@ import {
 import {
   createBuildingApi,
   getAllBuildingApi,
+  getAllBuildingStatsApi,
   getBuildingByIdApi,
   updateBuildingApi,
   updateBuildingStatusApi,
@@ -40,15 +48,24 @@ import {
   DialogDescription,
   DialogFooter,
 } from '../../components/ui/dialog';
-import { ITEMS_PER_PAGE } from '../../utils/constants';
+import {
+  DEFAULT_ORDER_BY,
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_TOTAL,
+  DEFAULT_PAGE_SIZE,
+} from '../../utils/constants';
 import { getPaginationNumbers } from '../../utils/pagination';
 import { getChangedFields, removeEmptyFields } from '../../utils/updateFields';
+import { formatDateVN } from '../../utils/time';
 
 export default function BuildingManagement() {
-  const [buildings, setBuildings] = useState<Building[]>();
-  const [filter, setFilter] = useState<BuildingStatus | 'all'>('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [buildings, setBuildings] = useState<Building[]>([]);
   const [managerMap, setManagerMap] = useState<Record<string, string>>({});
+  const [buildingStats, setBuildingStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+  });
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
   const [originalForm, setOriginalForm] = useState<BuildingForm | null>(null);
@@ -66,35 +83,86 @@ export default function BuildingManagement() {
     manager_id: '',
   });
   const [managers, setManagers] = useState<User[]>([]);
-  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState({ status: 'all', searchTerm: '' });
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(DEFAULT_PAGE);
+  const [totalPage, setTotalPage] = useState(DEFAULT_PAGE_TOTAL);
+  const [orderBy, setOrderBy] = useState(DEFAULT_ORDER_BY);
+  const [order, setOrder] = useState<OrderDirection>(OrderDirection.DESCENDING);
 
   useEffect(() => {
     const fetchData = async () => {
-      const [buildingRes, managerRes] = await Promise.all([getAllBuildingApi(), getManagers()]);
-      if (buildingRes && !buildingRes.success) {
-        toast.error(buildingRes.message);
-        return;
-      }
+      try {
+        const buildingStatRes = await getAllBuildingStatsApi();
+        if (!buildingStatRes.success) {
+          toast.error(buildingStatRes.message);
+          return;
+        }
 
-      const dataBuildings = (buildingRes.data ?? []) as Building[];
-      setBuildings(dataBuildings);
+        setBuildingStats(buildingStatRes.data);
 
-      if (managerRes.success) {
-        setManagers(managerRes.data);
-      }
+        const managerIds = buildingStatRes.data.managers || [];
+        const managersData = await Promise.allSettled(
+          managerIds.map((id: string) => getUserById(id)),
+        );
+        const validManagers = managersData.map(
+          (result) => (result as PromiseFulfilledResult<any>).value.data,
+        );
 
-      const managerMap: Record<string, string> = {};
-      if (managerRes.success) {
-        managerRes.data.forEach((m: any) => {
-          managerMap[m.id] = m.full_name;
+        setManagers(validManagers);
+
+        const map: Record<string, string> = {};
+        validManagers.forEach((manager) => {
+          map[manager.id] = manager.full_name;
         });
-      }
 
-      setManagerMap(managerMap);
+        setManagerMap(map);
+      } catch (error) {
+        toast.error('Cannot get stats!');
+      }
     };
 
     fetchData();
   }, []);
+
+  const fetchBuildings = async (p: number = page) => {
+    if (loading) return;
+    setLoading(true);
+
+    try {
+      const effectiveOrder = filters.searchTerm ? OrderDirection.ASCENDING : order;
+      const params: GetBuildingParams = {
+        ...(filters.status && filters.status !== 'all' ? { status: filters.status } : {}),
+        ...(filters.searchTerm ? { name: filters.searchTerm } : {}),
+        page: p,
+        page_size: DEFAULT_PAGE_SIZE,
+        ...(orderBy ? { order_by: orderBy } : {}),
+        ...(effectiveOrder ? { order: effectiveOrder } : {}),
+      };
+
+      const res = await getAllBuildingApi(params);
+      if (!res.success) {
+        toast.error(res.message);
+        return;
+      }
+
+      setBuildings(res.data.buildings);
+      setTotalPage(res.data.pagination.total_page);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setPage(DEFAULT_PAGE);
+    fetchBuildings(DEFAULT_PAGE);
+  }, [filters]);
+
+  useEffect(() => {
+    fetchBuildings();
+  }, [page]);
 
   const createBuilding = async (form: BuildingForm) => {
     const res = await createBuildingApi(removeEmptyFields(form));
@@ -214,32 +282,6 @@ export default function BuildingManagement() {
     );
   };
 
-  // Filter and search logic
-  const filteredBuildings =
-    buildings?.filter((building) => {
-      const matchesFilter = filter === 'all' || building.status === filter;
-
-      const name = (building.name ?? '').toLowerCase();
-      const code = (building.code ?? '').toLowerCase();
-      const address = (building.address ?? '').toLowerCase();
-      const search = searchTerm.toLowerCase();
-
-      const matchesSearch =
-        name.includes(search) || code.includes(search) || address.includes(search);
-
-      return matchesFilter && matchesSearch;
-    }) || [];
-
-  // Stats calculation
-  const totalBuildings = buildings?.length || 0;
-  const activeCount = buildings?.filter((b) => b.status === 'active').length || 0;
-  const inactiveCount = buildings?.filter((b) => b.status === 'inactive').length || 0;
-  const totalPages = Math.ceil(filteredBuildings.length / ITEMS_PER_PAGE);
-  const paginatedBuildings = filteredBuildings.slice(
-    (page - 1) * ITEMS_PER_PAGE,
-    page * ITEMS_PER_PAGE,
-  );
-
   return (
     <div className="space-y-6 p-6">
       {/* Header and Controls */}
@@ -356,8 +398,13 @@ export default function BuildingManagement() {
           </Button>
 
           <Select
-            value={filter}
-            onValueChange={(value: BuildingStatus | 'all') => setFilter(value)}
+            value={filters.status}
+            onValueChange={(value: BuildingStatus | 'all') => {
+              setFilters((prev) => ({
+                ...prev,
+                status: value,
+              }));
+            }}
           >
             <SelectTrigger className="w-[180px] h-10 border-gray-300 shadow-sm">
               <SelectValue placeholder="Filter by Status" />
@@ -377,8 +424,14 @@ export default function BuildingManagement() {
         <Input
           placeholder="Search by name, code, or address..."
           className="pl-10 h-10 border-gray-300 shadow-sm"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          value={filters.searchTerm}
+          onChange={(e) => {
+            const value = e.target.value;
+            setFilters((prev) => ({
+              ...prev,
+              searchTerm: value,
+            }));
+          }}
         />
       </div>
 
@@ -389,7 +442,7 @@ export default function BuildingManagement() {
             <CardTitle className="text-sm text-muted-foreground">Total Buildings</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-indigo-600">{totalBuildings}</div>
+            <div className="text-2xl font-bold text-indigo-600">{buildingStats.total}</div>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition duration-200 border-l-4 border-green-500">
@@ -397,7 +450,7 @@ export default function BuildingManagement() {
             <CardTitle className="text-sm text-muted-foreground">Active</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{activeCount}</div>
+            <div className="text-2xl font-bold text-green-600">{buildingStats.active}</div>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition duration-200 border-l-4 border-red-500">
@@ -405,14 +458,14 @@ export default function BuildingManagement() {
             <CardTitle className="text-sm text-muted-foreground">Inactive</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{inactiveCount}</div>
+            <div className="text-2xl font-bold text-red-600">{buildingStats.inactive}</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Building List (Cards) */}
       <div className="grid gap-4">
-        {paginatedBuildings.map((building, index) => (
+        {buildings.map((building, index) => (
           <Card
             key={`${building.id}-${index}`}
             className="shadow-md hover:shadow-xl transition duration-300"
@@ -449,7 +502,10 @@ export default function BuildingManagement() {
                     {managerMap[building.manager_id] ?? 'No manager'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Updated: {building.updated_at ? String(building.updated_at) : null}
+                    {' '}
+                    {building.updated_at
+                      ? `Updated: ${formatDateVN(building.updated_at)}`
+                      : `Created: ${formatDateVN(building.created_at)}`}
                   </p>
                 </div>
 
@@ -529,7 +585,7 @@ export default function BuildingManagement() {
 
         {/* Numbers */}
         <div className="flex gap-2">
-          {getPaginationNumbers(page, totalPages).map((item, idx) => {
+          {getPaginationNumbers(page, totalPage).map((item, idx) => {
             if (item === '...') {
               return (
                 <div key={idx} className="px-3 py-1 border rounded-lg text-gray-500">
@@ -561,22 +617,31 @@ export default function BuildingManagement() {
         {/* Next */}
         <Button
           variant="outline"
-          disabled={page === totalPages}
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          disabled={page === totalPage}
+          onClick={() => setPage((p) => Math.min(totalPage, p + 1))}
         >
           Next
         </Button>
       </div>
 
       {/* No data */}
-      {filteredBuildings.length === 0 && (
+      {buildings.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <Building2 className="size-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-lg text-muted-foreground">
               No buildings found matching the search or filter criteria.
             </p>
-            <Button variant="link" className="mt-2" onClick={() => setFilter('all')}>
+            <Button
+              variant="link"
+              className="mt-2"
+              onClick={() => {
+                setFilters({
+                  status: 'all',
+                  searchTerm: '',
+                });
+              }}
+            >
               View All
             </Button>
           </CardContent>
