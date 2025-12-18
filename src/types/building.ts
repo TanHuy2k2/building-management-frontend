@@ -1,3 +1,5 @@
+import { OrderDirection } from '.';
+
 export enum BuildingStatus {
   ACTIVE = 'active',
   INACTIVE = 'inactive',
@@ -26,4 +28,13 @@ export interface BuildingForm {
 
 export interface UpdateBuildingStatusDto {
   status: BuildingStatus;
+}
+
+export interface GetBuildingParams {
+  name?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+  order_by?: string;
+  order?: OrderDirection;
 }

@@ -56,7 +56,7 @@ import {
   DEFAULT_ORDER_BY,
   DEFAULT_PAGE,
   DEFAULT_PAGE_TOTAL,
-  LIST_ITEMS_PER_PAGE,
+  DEFAULT_PAGE_SIZE,
 } from '../../utils/constants';
 import { getPaginationNumbers } from '../../utils/pagination';
 
@@ -140,7 +140,7 @@ export default function RestaurantManagement() {
         ...(filters.building_id ? { building_id: filters.building_id } : {}),
         ...(filters.searchTerm ? { name: filters.searchTerm } : {}),
         page: p,
-        page_size: LIST_ITEMS_PER_PAGE,
+        page_size: DEFAULT_PAGE_SIZE,
         ...(orderBy ? { order_by: orderBy } : {}),
         ...(effectiveOrder ? { order: effectiveOrder } : {}),
       };
