@@ -1,3 +1,5 @@
+import { OrderDirection } from './';
+
 export enum FacilityStatus {
   AVAILABLE = 'available',
   MAINTENANCE = 'maintenance',
@@ -42,4 +44,13 @@ export interface FacilityForm {
   location: FacilityLocation;
   base_price: number;
   service_charge: number;
+}
+
+export interface GetFacilityParams {
+  name?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+  order_by?: string;
+  order?: OrderDirection;
 }

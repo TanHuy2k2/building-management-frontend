@@ -39,7 +39,7 @@ import {
   updateBuildingStatusApi,
 } from '../../services/buildingService';
 import toast from 'react-hot-toast';
-import { getManagers, getUserById } from '../../services/userService';
+import { getUserById } from '../../services/userService';
 import {
   Dialog,
   DialogContent,
@@ -90,38 +90,38 @@ export default function BuildingManagement() {
   const [orderBy, setOrderBy] = useState(DEFAULT_ORDER_BY);
   const [order, setOrder] = useState<OrderDirection>(OrderDirection.DESCENDING);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const buildingStatRes = await getAllBuildingStatsApi();
-        if (!buildingStatRes.success) {
-          toast.error(buildingStatRes.message);
-          return;
-        }
-
-        setBuildingStats(buildingStatRes.data);
-
-        const managerIds = buildingStatRes.data.managers || [];
-        const managersData = await Promise.allSettled(
-          managerIds.map((id: string) => getUserById(id)),
-        );
-        const validManagers = managersData.map(
-          (result) => (result as PromiseFulfilledResult<any>).value.data,
-        );
-
-        setManagers(validManagers);
-
-        const map: Record<string, string> = {};
-        validManagers.forEach((manager) => {
-          map[manager.id] = manager.full_name;
-        });
-
-        setManagerMap(map);
-      } catch (error) {
-        toast.error('Cannot get stats!');
+  const fetchData = async () => {
+    try {
+      const buildingStatRes = await getAllBuildingStatsApi();
+      if (!buildingStatRes.success) {
+        toast.error(buildingStatRes.message);
+        return;
       }
-    };
 
+      setBuildingStats(buildingStatRes.data);
+
+      const managerIds = buildingStatRes.data.managers || [];
+      const managersData = await Promise.allSettled(
+        managerIds.map((id: string) => getUserById(id)),
+      );
+      const validManagers = managersData.map(
+        (result) => (result as PromiseFulfilledResult<any>).value.data,
+      );
+
+      setManagers(validManagers);
+
+      const map: Record<string, string> = {};
+      validManagers.forEach((manager) => {
+        map[manager.id] = manager.full_name;
+      });
+
+      setManagerMap(map);
+    } catch (error) {
+      toast.error('Cannot get stats!');
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -172,24 +172,8 @@ export default function BuildingManagement() {
       return;
     }
 
-    const buildingId = res.data.id;
-    const detailRes = await getBuildingByIdApi(buildingId);
-    if (!detailRes.success) {
-      toast.error('Created but failed to load building info');
-      return;
-    }
-
-    const newBuilding = detailRes.data as Building;
-    setBuildings((prev) => [newBuilding, ...(prev ?? [])]);
-    if (newBuilding.manager_id) {
-      const user = await getUserById(newBuilding.manager_id);
-      if (user.success) {
-        setManagerMap((prev) => ({
-          ...prev,
-          [newBuilding.manager_id]: user.data.full_name,
-        }));
-      }
-    }
+    await fetchBuildings(DEFAULT_PAGE);
+    fetchData();
 
     toast.success('Add building successfully');
     setOpen(false);
@@ -197,20 +181,14 @@ export default function BuildingManagement() {
 
   const updateBuildingStatus = async (id: string, status: BuildingStatus) => {
     const res = await updateBuildingStatusApi(id, status);
-    const buildingId = res.data.id;
-    const detailRes = await getBuildingByIdApi(buildingId);
-    if (!detailRes.success) {
-      toast.error(detailRes.message);
+    if (!res.success) {
+      toast.error(res.message);
 
       return;
     }
 
-    const newBuilding = detailRes.data as Building;
-    setBuildings((prev) => {
-      if (!prev) return [newBuilding];
-
-      return prev.map((b) => (b.id === newBuilding.id ? newBuilding : b));
-    });
+    await fetchBuildings();
+    fetchData();
 
     toast.success('Update building status successfully');
     setOpen(false);
@@ -380,9 +358,9 @@ export default function BuildingManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <div className="flex items-center justify-between flex-wrap gap-4 border-b pb-4">
+      <div className="flex items-center justify-between border-b pb-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Building Management 🏢</h1>
+          <h1 className="text-3xl font-bold">Building Management 🏢</h1>
           <p className="text-muted-foreground mt-1">Overview and list of property assets</p>
         </div>
         <div className="flex items-center gap-4">
