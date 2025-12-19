@@ -1,11 +1,30 @@
-import { FacilityForm, FacilityStatus, ResponseInterface } from '../types';
+import { FacilityForm, FacilityStatus, ResponseInterface, GetFacilityParams } from '../types';
+import { buildQuery } from '../utils/query';
 import { API_ENDPOINTS, apiRequest } from './api';
 import { getAccessToken } from './tokenService';
 
-export async function getAllFacilityApi(): Promise<ResponseInterface> {
+export async function getAllFacilityApi(params?: GetFacilityParams): Promise<ResponseInterface> {
   try {
     const token = await getAccessToken();
-    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.FACILITIES, {
+    const query = params ? buildQuery(params) : '';
+    const url = query ? `${API_ENDPOINTS.FACILITIES}?${query}` : API_ENDPOINTS.FACILITIES;
+    const response: ResponseInterface = await apiRequest(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
+
+export async function getAllFacilityStatsApi(): Promise<ResponseInterface> {
+  try {
+    const token = await getAccessToken();
+    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.FACILITY_STATS, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,

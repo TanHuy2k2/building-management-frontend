@@ -38,6 +38,7 @@ export const API_ENDPOINTS = {
   CREATE_FACILITY: '/facilities/create',
   UPDATE_FACILITY: (id: string) => `/facilities/update/${id}`,
   UPDATE_FACILITY_STATUS: (id: string) => `/facilities/update-status/${id}`,
+  FACILITY_STATS: '/facilities/stats',
 
   // Reservations
   RESERVATIONS: '/facility_reservations',
