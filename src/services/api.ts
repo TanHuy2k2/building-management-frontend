@@ -42,6 +42,7 @@ export const API_ENDPOINTS = {
 
   // Reservations
   RESERVATIONS: '/facility_reservations',
+  RESERVATION_BY_ID: (id: string) => `/facility_reservations/${id}`,
 
   // Restaurants
   RESTAURANTS: '/restaurants',
