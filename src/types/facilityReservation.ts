@@ -1,4 +1,4 @@
-import { Building, Facility, User } from '.';
+import { Building, Facility, OrderDirection, User } from '.';
 
 export enum FacilityReservationStatus {
   PENDING = 'pending',
@@ -28,4 +28,13 @@ export interface ReservationView extends FacilityReservation {
   user?: User;
   facility?: Facility;
   building?: Building;
+}
+
+export interface GetReservationParams {
+  name?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+  order_by?: string;
+  order?: OrderDirection;
 }
