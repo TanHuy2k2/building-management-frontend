@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { Search, Calendar, Clock, MapPin } from 'lucide-react';
+import { Search, Calendar, Clock, MapPin, Info } from 'lucide-react';
 import {
   FacilityReservation,
   FacilityReservationStatus,
@@ -28,6 +28,7 @@ import { getFacilityByIdApi } from '../../services/facilityService';
 import { durationHours, formatDateVN, formatTimeVN } from '../../utils/time';
 import { getPaginationNumbers } from '../../utils/pagination';
 import { getBuildingByIdApi } from '../../services/buildingService';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 
 export default function ReservationManagement() {
   /* ===================== STATE ===================== */
@@ -44,6 +45,9 @@ export default function ReservationManagement() {
   const userCache = useRef<Map<string, any>>(new Map());
   const facilityCache = useRef<Map<string, any>>(new Map());
   const buildingCache = useRef<Map<string, any>>(new Map());
+  /* ===================== DETAIL =================== */
+  const [openDetail, setOpenDetail] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<ReservationView | null>(null);
   /* ===================== MAP RELATIONS ===================== */
   const mapReservationRelations = async (
     data: FacilityReservation[],
@@ -184,7 +188,8 @@ export default function ReservationManagement() {
     }
   };
 
-  /* ===================== RENDER ===================== */ return (
+  /* ===================== RENDER ===================== */
+  return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="border-b pb-4">
@@ -233,7 +238,22 @@ export default function ReservationManagement() {
           return (
             <Card key={r.id}>
               <CardHeader className="flex flex-row justify-between items-center">
-                <CardTitle>{r.facility?.name}</CardTitle> {getStatusBadge(r.status)}
+                <CardTitle>{r.facility?.name}</CardTitle>
+
+                <div className="flex items-center gap-2">
+                  {getStatusBadge(r.status)}
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setSelectedReservation(r);
+                      setOpenDetail(true);
+                    }}
+                  >
+                    <Info className="size-4 text-muted-foreground" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <p>
@@ -329,6 +349,54 @@ export default function ReservationManagement() {
           </CardContent>
         </Card>
       )}
+      <Dialog open={openDetail} onOpenChange={setOpenDetail}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Reservation Detail</DialogTitle>
+          </DialogHeader>
+
+          {selectedReservation && (
+            <div className="space-y-3 text-sm">
+              <p>
+                <strong>Reservation ID:</strong> {selectedReservation.id}
+              </p>
+
+              <p>
+                <strong>User:</strong> {selectedReservation.user?.full_name}
+              </p>
+
+              <p>
+                <strong>Facility:</strong> {selectedReservation.facility?.name}
+              </p>
+
+              <p>
+                <strong>Building:</strong> {selectedReservation.building?.name}
+              </p>
+
+              <p>
+                <strong>Status:</strong> {statusConfig[selectedReservation.status].label}
+              </p>
+
+              <div className="flex gap-2 items-center">
+                <Calendar className="size-4" />
+                {formatDateVN(selectedReservation.start_time)}
+              </div>
+
+              <div className="flex gap-2 items-center">
+                <Clock className="size-4" />
+                {formatTimeVN(selectedReservation.start_time)} –{' '}
+                {formatTimeVN(selectedReservation.end_time)}
+              </div>
+
+              {selectedReservation.facility?.facility_type !== FacilityType.ROOM && (
+                <p>
+                  <strong>Total:</strong> {selectedReservation.total_amount} VND
+                </p>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
