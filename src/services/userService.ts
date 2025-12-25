@@ -1,14 +1,28 @@
-import { UpdatePasswordDto } from './../types/user';
+import { GetUsersParams, UpdatePasswordDto } from './../types/user';
 import { CreateUserDto, ResponseInterface } from '../types';
 import { API_ENDPOINTS, apiRequest } from './api';
 import { getAccessToken } from '../services/tokenService';
+import { buildQuery } from '../utils/query';
 
-export async function getUsers(): Promise<ResponseInterface> {
+export async function getUsers(params?: GetUsersParams): Promise<ResponseInterface> {
   const token = await getAccessToken();
-
-  return apiRequest(API_ENDPOINTS.USERS, {
+  const query = params ? buildQuery(params) : '';
+  const url = query ? `${API_ENDPOINTS.USERS}?${query}` : API_ENDPOINTS.USERS;
+  const response: ResponseInterface = await apiRequest(url, {
     headers: {
       Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return response;
+}
+
+export async function getUsersStats(): Promise<ResponseInterface> {
+  const accessToken = await getAccessToken();
+  return apiRequest(API_ENDPOINTS.USERS_STATS, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
     },
   });
 }

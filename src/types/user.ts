@@ -1,3 +1,5 @@
+import { OrderDirection } from './restaurant';
+
 export enum UserRole {
   MANAGER = 'manager',
   USER = 'user',
@@ -67,6 +69,56 @@ export enum Permission {
   VIEW_INFORMATION_LIST = 'view_information_list',
 }
 
+export const PERMISSION_GROUPS: Record<string, Permission[]> = {
+  Site: [Permission.CREATE_SITE, Permission.UPDATE_SITE],
+  Building: [Permission.CREATE_BUILDING, Permission.UPDATE_BUILDING],
+  User: [
+    Permission.GET_ALL_USERS,
+    Permission.GET_USER_DETAIL,
+    Permission.CREATE_USER,
+    Permission.UPDATE_USER,
+  ],
+  Permission: [
+    Permission.GET_ALL_PERMISSIONS,
+    Permission.GET_PERMISSION,
+    Permission.CREATE_PERMISSION,
+    Permission.UPDATE_PERMISSION,
+  ],
+  Restaurant: [Permission.CREATE_RESTAURANT, Permission.UPDATE_RESTAURANT],
+  Order: [Permission.VIEW_ORDER_LIST, Permission.UPDATE_ORDER_STATUS, Permission.VIEW_SALES],
+  Menu: [Permission.VIEW_MENU, Permission.CREATE_MENU, Permission.UPDATE_MENU],
+  Dish: [Permission.CREATE_DISH, Permission.UPDATE_DISH],
+  Facility: [Permission.CREATE_FACILITY, Permission.UPDATE_FACILITY],
+  Parking: [Permission.CREATE_PARKING_SPACE, Permission.UPDATE_PARKING_SPACE],
+  Bus: [Permission.CREATE_BUS, Permission.GET_ALL_BUSES, Permission.GET_BUS, Permission.UPDATE_BUS],
+  BusRoute: [
+    Permission.CREATE_BUS_ROUTE,
+    Permission.GET_ALL_BUS_ROUTES,
+    Permission.GET_BUS_ROUTE_DETAIL,
+    Permission.UPDATE_BUS_ROUTE,
+    Permission.UPDATE_BUS_ROUTE_STATUS,
+  ],
+  BookingBus: [
+    Permission.GET_ALL_BOOKING_BUS,
+    Permission.GET_BOOKING_BUS_DETAIL,
+    Permission.CREATE_BOOKING_BUS,
+  ],
+  Event: [Permission.UPDATE_EVENT_BOOKING_STATUS, Permission.GET_EVENT_PARTICIPANTS],
+  Information: [Permission.CREATE_INFORMATION, Permission.VIEW_INFORMATION_LIST],
+};
+
+export interface GroupedPermission {
+  group: string;
+  permissions: Permission[];
+}
+
+export const groupedPermissions: GroupedPermission[] = Object.entries(PERMISSION_GROUPS).map(
+  ([group, permissions]) => ({
+    group,
+    permissions,
+  }),
+);
+
 export interface User {
   id: string;
   email: string;
@@ -77,7 +129,7 @@ export interface User {
   rank: UserRank;
   points: number;
   role: UserRole;
-  permissions?: string[] | null;
+  permissions?: Permission[] | null;
   status: ActiveStatus;
   created_at?: Date;
   updated_at?: Date | null;
@@ -93,7 +145,33 @@ export interface CreateUserDto extends Pick<
   confirm_password: string;
 }
 
+export interface UserForm extends Pick<
+  User,
+  'email' | 'username' | 'full_name' | 'phone' | 'role' | 'permissions'
+> {
+  id?: string;
+  password?: string;
+  confirm_password?: string;
+  rank?: UserRank;
+  points?: number;
+  image_url?: string | null;
+}
+
 export interface UpdatePasswordDto {
   password: string;
   confirm_password: string;
+}
+
+export type UserModalMode = 'create' | 'edit' | 'view' | null;
+
+export interface GetUsersParams {
+  search_text?: string;
+  search_field?: 'full_name' | 'email';
+  role?: UserRole;
+  rank?: UserRank;
+  status?: ActiveStatus;
+  page?: number;
+  page_size?: number;
+  order_by?: string;
+  order?: OrderDirection;
 }
