@@ -13,7 +13,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getRankDetails } from '../../data/mockData';
+import { getRankDetails } from '../../utils/rank';
 
 export default function UserLayout() {
   const location = useLocation();

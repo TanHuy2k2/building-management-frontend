@@ -10,8 +10,9 @@ import {
 } from '../../components/ui/dialog';
 
 import { useAuth } from '../../contexts/AuthContext';
-import { getRankDetails, mockTransactions } from '../../data/mockData';
-import { User, Crown, Award, TrendingUp } from 'lucide-react';
+import { getRankDetails } from '../../utils/rank';
+import { mockTransactions } from '../../data/mockData';
+import { Crown, Award, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { EmailAuthProvider, getAuth, reauthenticateWithCredential } from 'firebase/auth';

@@ -29,8 +29,9 @@ import {
   Edit,
   Trash2,
   Home,
+  ChevronDown,
 } from 'lucide-react';
-import { getAllBuildingApi } from '../../services/buildingService';
+import { getBuildingByIdApi } from '../../services/buildingService';
 import {
   getAllRestaurantsApi,
   getRestaurantByIdApi,
@@ -101,28 +102,38 @@ export default function RestaurantManagement() {
     : 'All buildings';
 
   const fetchData = async () => {
-    const [buildingRes, restaurantStatRes] = await Promise.all([
-      getAllBuildingApi(),
-      getAllRestaurantsStatsApi(),
-    ]);
-
-    // BUILDINGS
-    if (buildingRes && !buildingRes.success) {
-      toast.error(buildingRes.message);
-      return;
-    }
-    const dataBuildings = buildingRes.data ?? [];
-    setBuildings(dataBuildings);
-    const map: Record<string, string> = {};
-    dataBuildings.forEach((b: Building) => (map[b.id] = b.name));
-    setBuildingMap(map);
-
-    // STATS
+    const restaurantStatRes = await getAllRestaurantsStatsApi();
     if (!restaurantStatRes.success) {
       toast.error(restaurantStatRes.message);
       return;
     }
+
     setRestaurantStats(restaurantStatRes.data);
+
+    const buildingIds = restaurantStatRes.data.building_ids;
+    if (!buildingIds?.length) return;
+
+    const buildingResults = await Promise.all(
+      buildingIds.map((id: string) => getBuildingByIdApi(id)),
+    );
+
+    const { buildings, map } = buildingResults.reduce<{
+      buildings: Building[];
+      map: Record<string, string>;
+    }>(
+      (acc, res) => {
+        if (res?.success && res.data) {
+          const b = res.data;
+          acc.buildings.push(b);
+          acc.map[b.id] = b.name;
+        }
+        return acc;
+      },
+      { buildings: [], map: {} },
+    );
+
+    setBuildings(buildings);
+    setBuildingMap(map);
   };
 
   useEffect(() => {
@@ -515,92 +526,99 @@ export default function RestaurantManagement() {
           >
             <Plus className="size-4 mr-2" /> Add New Restaurant
           </Button>
-
-          <Select
-            value={filters.status}
-            onValueChange={(v: RestaurantStatus | 'all') => {
-              setFilters((prev) => ({
-                ...prev,
-                status: v,
-              }));
-            }}
-          >
-            <SelectTrigger className="w-[180px] h-10 border-gray-300 shadow-sm">
-              <SelectValue placeholder="Filter by Status" />
-            </SelectTrigger>
-
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
-      {/* SEARCH + BUILDING FILTER */}
-      <div className="flex flex-wrap gap-4 items-center">
-        <div className="relative flex-1 min-w-[240px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            placeholder="Search restaurants..."
-            className="pl-10 h-10 border-gray-300 shadow-sm"
-            value={filters.searchTerm}
-            onChange={(e) => {
-              const value = e.target.value;
-              setFilters((prev) => ({
-                ...prev,
-                searchTerm: value,
-              }));
-            }}
-          />
-        </div>
+      {/* Filters */}
+      <div className="flex gap-4">
+        <Popover>
+          <PopoverTrigger className="w-[200px]">
+            <button
+              className="
+                flex w-[200px] items-center justify-between
+                rounded-md
+                px-3 py-1.5 text-sm
+                bg-gray-100
+                focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
+              "
+            >
+              <span className="truncate">{selectedBuildingName}</span>
+              <ChevronDown
+                style={{
+                  transform: 'scale(0.7) translateY(1px)',
+                  opacity: 0.3,
+                }}
+              />
+            </button>
+          </PopoverTrigger>
 
-        <div className="w-[240px]">
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="w-full border rounded-lg px-3 py-2 text-left bg-background">
-                {selectedBuildingName}
-              </button>
-            </PopoverTrigger>
+          <PopoverContent className="w-[240px] p-0">
+            <Command>
+              <CommandInput placeholder="Search building..." />
+              <CommandList>
+                <CommandItem
+                  onSelect={() => {
+                    setFilters((prev) => ({
+                      ...prev,
+                      building_id: '',
+                    }));
+                  }}
+                >
+                  <Check
+                    className="mr-2 h-4 w-4"
+                    style={{
+                      opacity: filters.building_id === '' ? 1 : 0,
+                    }}
+                  />
+                  All buildings
+                </CommandItem>
 
-            <PopoverContent className="w-[240px] p-0">
-              <Command>
-                <CommandInput placeholder="Search building..." />
-                <CommandList>
+                {(buildings ?? []).map((b) => (
                   <CommandItem
+                    key={b.id}
                     onSelect={() => {
                       setFilters((prev) => ({
                         ...prev,
-                        building_id: '',
+                        building_id: b.id,
                       }));
                     }}
                   >
-                    All buildings
-                  </CommandItem>
-
-                  {(buildings ?? []).map((b) => (
-                    <CommandItem
-                      key={b.id}
-                      onSelect={() => {
-                        setFilters((prev) => ({
-                          ...prev,
-                          building_id: b.id,
-                        }));
+                    <Check
+                      className="mr-2 h-4 w-4"
+                      style={{
+                        opacity: filters.building_id === b.id ? 1 : 0,
                       }}
-                    >
-                      <Check
-                        className={`mr-2 h-4 w-4 ${
-                          filters.building_id === b.id ? 'opacity-100' : 'opacity-0'
-                        }`}
-                      />
-                      {b.name}
-                    </CommandItem>
-                  ))}
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+                    />
+                    {b.name}
+                  </CommandItem>
+                ))}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+
+        <Select
+          value={filters.status}
+          onValueChange={(v: any) => setFilters((p) => ({ ...p, status: v }))}
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            className="pl-10"
+            placeholder="Search restaurant..."
+            value={filters.searchTerm}
+            onChange={(e) => setFilters((p) => ({ ...p, searchTerm: e.target.value }))}
+          />
         </div>
       </div>
 

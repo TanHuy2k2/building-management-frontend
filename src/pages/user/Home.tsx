@@ -11,13 +11,13 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getRankDetails } from '../../data/mockData';
+import { getRankDetails } from '../../utils/rank';
 
 export default function UserHome() {
   const { currentUser } = useAuth();
 
   if (!currentUser) return null;
-  const rankDetails = getRankDetails(currentUser.ranks);
+  const rankDetails = getRankDetails(currentUser.rank);
 
   const services = [
     {
