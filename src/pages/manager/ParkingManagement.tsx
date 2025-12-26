@@ -1,11 +1,17 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
-import { Building2, ParkingCircle, Car, CheckCircle, ArrowLeft } from 'lucide-react';
-import { Building, GetParkingParams, ParkingSpace, ParkingSpaceStatus } from '../../types';
+import { Building2, ParkingCircle, ArrowLeft } from 'lucide-react';
+import { Building, GetParkingParams, ParkingSpace, User } from '../../types';
 import toast from 'react-hot-toast';
 import { getAllBuildingApi } from '../../services/buildingService';
 import { getAllParkingApi, getAllParkingSpaceStatsApi } from '../../services/parkingSpaceService';
+import { ParkingSubscription } from '../../types/parkingSubscription';
+import {
+  getCurrentParkingSubscriptionApi,
+  getParkingSubscriptionsApi,
+} from '../../services/parkingSubscriptionService';
+import { getUserById } from '../../services/userService';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../components/ui/dialog';
 
 export default function ParkingManagement() {
   const [buildings, setBuildings] = useState<Building[]>([]);
@@ -18,6 +24,13 @@ export default function ParkingManagement() {
     maintenance: 0,
     reserved: 0,
   });
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<ParkingSpace | null>(null);
+  const [subscription, setSubscription] = useState<ParkingSubscription | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<ParkingSubscription[]>([]);
+  const isReserved = selectedSlot?.status === 'reserved';
 
   useEffect(() => {
     fetchBuildings();
@@ -251,6 +264,191 @@ export default function ParkingManagement() {
     },
   } as const;
 
+  const handleSelectSlot = async (slot: ParkingSpace) => {
+    setSelectedSlot(slot);
+    setSubscription(null);
+    setUser(null);
+    setOpenDialog(true);
+
+    if (slot.status !== 'reserved') return;
+
+    try {
+      const subRes = await getCurrentParkingSubscriptionApi(String(slot.id));
+      if (!subRes.success || !subRes.data) {
+        toast.error(subRes.message);
+
+        return;
+      }
+
+      const subscription = subRes.data[0];
+      setSubscription(subscription);
+
+      const userRes = await getUserById(subscription.user_id);
+      if (!userRes.success) {
+        toast.error(userRes.message);
+
+        return;
+      }
+
+      setUser(userRes.data);
+    } catch (err) {
+      toast.error('Failed to load reservation detail');
+    }
+  };
+
+  const InfoRow = ({ label, value }: { label: string; value?: string }) => {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontSize: 13,
+          marginBottom: 8,
+        }}
+      >
+        <span style={{ color: '#6b7280' }}>{label}</span>
+        <span style={{ fontWeight: 500 }}>{value ?? '-'}</span>
+      </div>
+    );
+  };
+
+  const ParkingInfo = ({ slot }: { slot: ParkingSpace }) => {
+    return (
+      <div>
+        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Parking Information</h3>
+        <InfoRow label="Code" value={slot.code} />
+        <InfoRow label="Area" value={slot.location.area} />
+        <InfoRow label="Floor" value={String(slot.location.floor)} />
+        <InfoRow label="Status" value={slot.status} />
+      </div>
+    );
+  };
+
+  const SubscriptionInfo = ({ subscription }: { subscription: ParkingSubscription }) => {
+    return (
+      <div style={{ marginTop: 16 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
+          Subscription Information
+        </h3>
+
+        <InfoRow label="Status" value={subscription.status} />
+        <InfoRow
+          label="Start Time"
+          value={new Date(subscription.start_time).toLocaleString('vi-VN')}
+        />
+        <InfoRow label="End Time" value={new Date(subscription.end_time).toLocaleString('vi-VN')} />
+        <InfoRow label="Base Amount" value={`${subscription.base_amount}`} />
+        <InfoRow label="Discount" value={`${subscription.discount}`} />
+        <InfoRow label="Total Amount" value={`${subscription.total_amount}`} />
+      </div>
+    );
+  };
+
+  const UserInfo = ({ user }: { user: User | null }) => {
+    if (!user) {
+      return <div>No user information</div>;
+    }
+
+    return (
+      <div>
+        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>User Information</h3>
+
+        <InfoRow label="Name" value={user.full_name} />
+        <InfoRow label="Email" value={user.email} />
+        <InfoRow label="Phone" value={user.phone} />
+      </div>
+    );
+  };
+
+  function HistoryPanel({
+    history,
+    onClose,
+  }: {
+    history: ParkingSubscription[];
+    onClose: () => void;
+  }) {
+    return (
+      <div
+        style={{
+          borderLeft: '1px solid #e5e7eb',
+          paddingLeft: 16,
+          maxHeight: 500,
+          overflowY: 'auto',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginBottom: 12,
+          }}
+        >
+          <h3 style={{ fontSize: 14, fontWeight: 600 }}>Subscription History</h3>
+
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: 12,
+              cursor: 'pointer',
+              color: '#6b7280',
+            }}
+          >
+            Close
+          </button>
+        </div>
+
+        {loading ? (
+          <p>Loading...</p>
+        ) : history.length === 0 ? (
+          <p style={{ fontSize: 13, color: '#6b7280' }}>No subscription history</p>
+        ) : (
+          history.map((item) => (
+            <div
+              key={item.id}
+              style={{
+                padding: 12,
+                borderRadius: 8,
+                border: '1px solid #e5e7eb',
+                marginBottom: 8,
+                fontSize: 13,
+              }}
+            >
+              <InfoRow label="Status" value={item.status} />
+              <InfoRow
+                label="Time"
+                value={`${new Date(item.start_time).toLocaleDateString()} → ${new Date(
+                  item.end_time,
+                ).toLocaleDateString()}`}
+              />
+              <InfoRow label="Total" value={`${item.total_amount}`} />
+            </div>
+          ))
+        )}
+      </div>
+    );
+  }
+
+  const handleViewHistory = async () => {
+    if (!selectedSlot) return;
+
+    try {
+      setShowHistory(true);
+
+      const res = await getParkingSubscriptionsApi(String(selectedSlot.id));
+      if (!res.success) {
+        toast.error(res.message);
+
+        return;
+      }
+
+      setHistory(res.data);
+    } catch (err) {
+      toast.error('Failed to load subscription history');
+    }
+  };
+
   /* =======================
    * PARKING VIEW
    ======================= */
@@ -384,6 +582,7 @@ export default function ParkingManagement() {
               return (
                 <div
                   key={slot.id}
+                  onClick={() => handleSelectSlot(slot)}
                   style={{
                     padding: 16,
                     borderRadius: 12,
@@ -439,6 +638,71 @@ export default function ParkingManagement() {
           </div>
         </CardContent>
       </Card>
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent
+          style={{
+            maxWidth: showHistory && isReserved ? 1100 : showHistory ? 700 : isReserved ? 800 : 420,
+            transition: 'max-width 0.2s ease',
+          }}
+        >
+          <DialogTitle>Parking Detail</DialogTitle>
+          <DialogDescription>
+            View parking space details and subscription information
+          </DialogDescription>
+          {!selectedSlot ? (
+            <p>Loading...</p>
+          ) : (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: showHistory
+                  ? isReserved
+                    ? '1fr 1.3fr 1fr'
+                    : '1.3fr 1fr'
+                  : isReserved
+                    ? '1fr 1.3fr'
+                    : '1fr',
+                gap: 24,
+              }}
+            >
+              {/* USER */}
+              {isReserved && (
+                <div style={{ borderRight: '1px solid #e5e7eb', paddingRight: 16 }}>
+                  <UserInfo user={user} />
+                </div>
+              )}
+
+              <div>
+                <ParkingInfo slot={selectedSlot} />
+
+                {subscription && <SubscriptionInfo subscription={subscription} />}
+
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ height: 1, background: '#e5e7eb', marginBottom: 12 }} />
+
+                  <button
+                    onClick={handleViewHistory}
+                    style={{
+                      fontSize: 13,
+                      color: '#2563eb',
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    View subscription history →
+                  </button>
+                </div>
+              </div>
+
+              {showHistory && (
+                <HistoryPanel history={history} onClose={() => setShowHistory(false)} />
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
