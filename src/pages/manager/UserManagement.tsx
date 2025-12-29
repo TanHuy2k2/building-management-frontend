@@ -8,9 +8,10 @@ import {
   ActiveStatus,
   CreateUserDto,
   GetUsersParams,
-  groupedPermissions,
+  groupPermissions,
   OrderDirection,
   Permission,
+  PermissionInterface,
   ResponseInterface,
   UserForm,
   User as UserInterFace,
@@ -18,7 +19,13 @@ import {
   UserRank,
   UserRole,
 } from '../../types';
-import { createUser, getUsers, getUsersStats, updateUser } from '../../services/userService';
+import {
+  createUser,
+  getAllPermissions,
+  getUsers,
+  getUsersStats,
+  updateUserPermissions,
+} from '../../services/userService';
 import { Button } from '../../components/ui/button';
 import { Label } from '../../components/ui/label';
 import { Checkbox } from '../../components/ui/checkbox';
@@ -41,7 +48,6 @@ import {
 export default function UserManagement() {
   const [users, setUsers] = useState<UserInterFace[]>([]);
   const [permissionSearch, setPermissionSearch] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(DEFAULT_PAGE);
   const [totalPage, setTotalPage] = useState(DEFAULT_PAGE_TOTAL);
@@ -65,6 +71,8 @@ export default function UserManagement() {
     roles: {},
     ranks: {},
   });
+  const [originalPermissions, setOriginalPermissions] = useState<Permission[]>([]);
+  const [allPermissions, setAllPermissions] = useState<PermissionInterface[]>([]);
   const { BE_URL } = process.env;
 
   const fetchUserStats = async () => {
@@ -74,7 +82,18 @@ export default function UserManagement() {
 
       setUserStats(res.data);
     } catch (error) {
-      console.error(error);
+      toast.error(error);
+    }
+  };
+
+  const fetchPermissions = async () => {
+    try {
+      const res: ResponseInterface = await getAllPermissions();
+      if (!res.success) return;
+      
+      setAllPermissions(res.data);
+    } catch (error) {
+      toast.error(error);
     }
   };
 
@@ -108,7 +127,18 @@ export default function UserManagement() {
   };
 
   useEffect(() => {
-    fetchUserStats();
+    const init = async () => {
+      try {
+        setLoading(true);
+        await Promise.all([fetchUserStats(), fetchPermissions()]);
+      } catch (err) {
+        toast.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    init();
   }, []);
 
   useEffect(() => {
@@ -195,15 +225,50 @@ export default function UserManagement() {
     });
   };
 
-  const filteredPermissionGroups = groupedPermissions
+  const filteredPermissionGroups = groupPermissions(allPermissions)
     .map(({ group, permissions }) => {
       const filtered = permissions.filter((p) =>
-        p.toLowerCase().includes(permissionSearch.toLowerCase()),
+        p.id.toLowerCase().includes(permissionSearch.toLowerCase()),
       );
 
-      return { group, permissions: filtered };
+      return {
+        group,
+        permissions: filtered,
+      };
     })
     .filter((g) => g.permissions.length > 0);
+
+  const isPermissionChanged =
+    modalMode === 'edit' &&
+    activeUser?.role === UserRole.MANAGER &&
+    JSON.stringify(activeUser.permissions || []) !== JSON.stringify(originalPermissions);
+
+  const handleUpdatePermissions = async () => {
+    if (!activeUser?.id) return;
+
+    try {
+      setLoading(true);
+      const res: ResponseInterface = await updateUserPermissions(
+        activeUser.id,
+        activeUser.permissions || [],
+      );
+      if (!res.success) {
+        toast.error(res.message || 'Failed to update permissions');
+
+        return;
+      }
+
+      toast.success('Permissions updated successfully');
+      setModalMode(null);
+      setActiveUser(null);
+
+      await fetchUsers(page);
+    } catch (err: any) {
+      toast.error(err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const resolveAvatar = (imageUrl?: string | null) => {
     if (!imageUrl) return DEFAULT_AVATAR_URL;
@@ -440,26 +505,29 @@ export default function UserManagement() {
                       <Eye className="size-4" />
                     </Button>
 
-                    <Button
-                      size="icon"
-                      variant="secondary"
-                      title="Edit"
-                      className="w-9 h-9"
-                      onClick={() => {
-                        setActiveUser({
-                          id: user.id,
-                          full_name: user.full_name,
-                          email: user.email,
-                          username: user.username,
-                          phone: user.phone,
-                          role: user.role,
-                          permissions: user.permissions,
-                        });
-                        setModalMode('edit');
-                      }}
-                    >
-                      <Edit className="size-4" />
-                    </Button>
+                    {user.role === UserRole.MANAGER && (
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        title="Edit"
+                        className="w-9 h-9"
+                        onClick={() => {
+                          setActiveUser({
+                            id: user.id,
+                            full_name: user.full_name,
+                            email: user.email,
+                            username: user.username,
+                            phone: user.phone,
+                            role: user.role,
+                            permissions: user.permissions,
+                          });
+                          setOriginalPermissions(user.permissions || []);
+                          setModalMode('edit');
+                        }}
+                      >
+                        <Edit className="size-4" />
+                      </Button>
+                    )}
 
                     <Button
                       size="icon"
@@ -484,7 +552,6 @@ export default function UserManagement() {
           onClick={() => {
             setModalMode(null);
             setActiveUser(null);
-            setSelectedFile(null);
           }}
         >
           <Card
@@ -586,8 +653,7 @@ export default function UserManagement() {
               </div>
             )}
 
-            {/* ===== CREATE / EDIT MODE ===== */}
-            {(modalMode === 'create' || modalMode === 'edit') && (
+            {modalMode === 'create' && (
               <div
                 style={{
                   width: '100%',
@@ -596,7 +662,7 @@ export default function UserManagement() {
                 }}
               >
                 {activeUser.role === UserRole.USER ? (
-                  /* ================= USER → SINGLE COLUMN ================= */
+                  /* ================= USER → SINGLE COLUMN (CREATE ONLY) ================= */
                   <div className="space-y-4">
                     <div>
                       <Label>Full Name</Label>
@@ -613,7 +679,6 @@ export default function UserManagement() {
                       <Input
                         placeholder="example@email.com"
                         value={activeUser.email}
-                        disabled={modalMode === 'edit'}
                         onChange={(e) => setActiveUser({ ...activeUser, email: e.target.value })}
                       />
                     </div>
@@ -636,36 +701,30 @@ export default function UserManagement() {
                     </div>
 
                     {/* PASSWORD */}
-                    {modalMode === 'create' && (
-                      <>
-                        <div>
-                          <Label>Password</Label>
-                          <Input
-                            placeholder="At least 8 characters and 1 uppercase"
-                            type="password"
-                            value={activeUser.password}
-                            onChange={(e) =>
-                              setActiveUser({ ...activeUser, password: e.target.value })
-                            }
-                          />
-                        </div>
+                    <div>
+                      <Label>Password</Label>
+                      <Input
+                        type="password"
+                        placeholder="At least 8 characters and 1 uppercase"
+                        value={activeUser.password}
+                        onChange={(e) => setActiveUser({ ...activeUser, password: e.target.value })}
+                      />
+                    </div>
 
-                        <div>
-                          <Label>Confirm Password</Label>
-                          <Input
-                            placeholder="At least 8 characters and 1 uppercase"
-                            type="password"
-                            value={activeUser.confirm_password}
-                            onChange={(e) =>
-                              setActiveUser({
-                                ...activeUser,
-                                confirm_password: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                      </>
-                    )}
+                    <div>
+                      <Label>Confirm Password</Label>
+                      <Input
+                        type="password"
+                        placeholder="At least 8 characters and 1 uppercase"
+                        value={activeUser.confirm_password}
+                        onChange={(e) =>
+                          setActiveUser({
+                            ...activeUser,
+                            confirm_password: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
 
                     {/* ROLE */}
                     <div>
@@ -689,23 +748,9 @@ export default function UserManagement() {
                         </SelectContent>
                       </Select>
                     </div>
-
-                    {/* AVATAR */}
-                    {modalMode === 'edit' && (
-                      <div>
-                        <Label>Avatar</Label>
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            if (e.target.files) setSelectedFile(e.target.files[0]);
-                          }}
-                        />
-                      </div>
-                    )}
                   </div>
                 ) : (
-                  /* ================= MANAGER → TWO COLUMNS ================= */
+                  /* ================= MANAGER → TWO COLUMNS (CREATE ONLY) ================= */
                   <div className="grid grid-cols-2 gap-6">
                     {/* ===== LEFT COLUMN ===== */}
                     <div className="space-y-4">
@@ -724,7 +769,6 @@ export default function UserManagement() {
                         <Input
                           placeholder="example@email.com"
                           value={activeUser.email}
-                          disabled={modalMode === 'edit'}
                           onChange={(e) => setActiveUser({ ...activeUser, email: e.target.value })}
                         />
                       </div>
@@ -749,36 +793,31 @@ export default function UserManagement() {
                       </div>
 
                       {/* PASSWORD */}
-                      {modalMode === 'create' && (
-                        <>
-                          <div>
-                            <Label>Password</Label>
-                            <Input
-                              placeholder="At least 8 characters and 1 uppercase"
-                              type="password"
-                              value={activeUser.password}
-                              onChange={(e) =>
-                                setActiveUser({ ...activeUser, password: e.target.value })
-                              }
-                            />
-                          </div>
+                      <div>
+                        <Label>Password</Label>
+                        <Input
+                          type="password"
+                          placeholder="At least 8 characters and 1 uppercase"
+                          value={activeUser.password}
+                          onChange={(e) =>
+                            setActiveUser({ ...activeUser, password: e.target.value })
+                          }
+                        />
+                      </div>
 
-                          <div>
-                            <Label>Confirm Password</Label>
-                            <Input
-                              placeholder="At least 8 characters and 1 uppercase"
-                              type="password"
-                              value={activeUser.confirm_password}
-                              onChange={(e) =>
-                                setActiveUser({
-                                  ...activeUser,
-                                  confirm_password: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
-                        </>
-                      )}
+                      <div>
+                        <Label>Confirm Password</Label>
+                        <Input
+                          type="password"
+                          value={activeUser.confirm_password}
+                          onChange={(e) =>
+                            setActiveUser({
+                              ...activeUser,
+                              confirm_password: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
                     </div>
 
                     {/* ===== RIGHT COLUMN ===== */}
@@ -806,21 +845,7 @@ export default function UserManagement() {
                         </Select>
                       </div>
 
-                      {/* AVATAR */}
-                      {modalMode === 'edit' && (
-                        <div>
-                          <Label>Avatar</Label>
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              if (e.target.files) setSelectedFile(e.target.files[0]);
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {/* PERMISSIONS */}
+                      {/* PERMISSIONS*/}
                       <div>
                         <Label>Permissions</Label>
 
@@ -834,20 +859,19 @@ export default function UserManagement() {
                         <div className="border rounded h-64 overflow-y-auto p-3 space-y-4">
                           {filteredPermissionGroups.map(({ group, permissions }) => (
                             <div key={group}>
-                              <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
-                                {group}
-                              </p>
+                              <p className="text-xs font-semibold mb-2 uppercase">{group}</p>
 
                               <div className="grid grid-cols-2 gap-3">
-                                {permissions.map((p) => (
-                                  <label key={p} className="flex items-start space-x-2 text-sm">
+                                {permissions.map((perm) => (
+                                  <label
+                                    key={perm.id}
+                                    className="flex items-start space-x-2 text-sm"
+                                  >
                                     <Checkbox
-                                      checked={activeUser.permissions?.includes(p)}
-                                      onCheckedChange={() => handleSelectPermission(p)}
+                                      checked={activeUser.permissions?.includes(perm.id)}
+                                      onCheckedChange={() => handleSelectPermission(perm.id)}
                                     />
-                                    <span className="capitalize break-words">
-                                      {p.replace(/_/g, ' ')}
-                                    </span>
+                                    <span className="capitalize">{perm.id.replace(/_/g, ' ')}</span>
                                   </label>
                                 ))}
                               </div>
@@ -867,6 +891,58 @@ export default function UserManagement() {
               </div>
             )}
 
+            {modalMode === 'edit' && activeUser.role === UserRole.MANAGER && (
+              <div className="space-y-6">
+                {/* ===== ROLE (READ ONLY) ===== */}
+                <div>
+                  <Label>Role</Label>
+                  <Input value="Manager" disabled className="bg-muted cursor-not-allowed" />
+                </div>
+
+                {/* ===== PERMISSIONS ===== */}
+                <div>
+                  <Label>Permissions</Label>
+
+                  <Input
+                    placeholder="Search permission..."
+                    className="mt-1 mb-2"
+                    value={permissionSearch}
+                    onChange={(e) => setPermissionSearch(e.target.value)}
+                  />
+
+                  <div className="border rounded h-64 overflow-y-auto p-3 space-y-4">
+                    {filteredPermissionGroups.map(({ group, permissions }) => (
+                      <div key={group}>
+                        <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
+                          {group}
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          {permissions.map((perm) => (
+                            <label key={perm.id} className="flex items-start space-x-2 text-sm">
+                              <Checkbox
+                                checked={activeUser.permissions?.includes(perm.id)}
+                                onCheckedChange={() => handleSelectPermission(perm.id)}
+                              />
+                              <span className="capitalize break-words">
+                                {perm.id.replace(/_/g, ' ')}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+
+                    {filteredPermissionGroups.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center">
+                        No permissions found
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ===== ACTIONS ===== */}
             <div className="flex justify-end gap-2 pt-6">
               <Button
@@ -874,14 +950,20 @@ export default function UserManagement() {
                 onClick={() => {
                   setModalMode(null);
                   setActiveUser(null);
-                  setSelectedFile(null);
                 }}
               >
                 Cancel
               </Button>
 
               {modalMode === 'create' && <Button onClick={handleCreate}>Create</Button>}
-              {modalMode === 'edit' && <Button>Save</Button>}
+              {modalMode === 'edit' && activeUser.role === UserRole.MANAGER && (
+                <Button
+                  onClick={handleUpdatePermissions}
+                  disabled={loading || !isPermissionChanged}
+                >
+                  Save
+                </Button>
+              )}
             </div>
           </Card>
         </div>

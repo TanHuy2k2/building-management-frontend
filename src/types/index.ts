@@ -1,4 +1,5 @@
 export * from './user';
+export * from './permission';
 export * from './response';
 export * from './building';
 export * from './facility';

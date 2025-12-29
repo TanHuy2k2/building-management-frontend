@@ -70,15 +70,28 @@ export async function createUser(user: CreateUserDto): Promise<ResponseInterface
   });
 }
 
-export async function updateUser(id: string, formData: FormData): Promise<ResponseInterface> {
+export async function getAllPermissions(): Promise<ResponseInterface> {
+  const accessToken = await getAccessToken();
+  return apiRequest(API_ENDPOINTS.PERMISSIONS, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}
+
+export async function updateUserPermissions(
+  id: string,
+  permissions: string[],
+): Promise<ResponseInterface> {
   const token = await getAccessToken();
 
-  return apiRequest(API_ENDPOINTS.USER_BY_ID(id), {
+  return apiRequest(API_ENDPOINTS.USER_PERMISSIONS_BY_ID(id), {
     method: 'PATCH',
-    body: formData,
     headers: {
       Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify({ permissions }),
   });
 }
 
