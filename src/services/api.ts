@@ -15,6 +15,9 @@ export const API_ENDPOINTS = {
   LOGOUT: '/auth/logout',
   REFRESH_TOKEN: '/auth/refresh-token',
 
+  // Permissions
+  PERMISSIONS: '/permissions',
+
   // Users
   USERS: '/users',
   USERS_STATS: '/users/stats',
@@ -23,6 +26,7 @@ export const API_ENDPOINTS = {
   UPDATE_PASSWORD: '/users/update-password',
   USER_BY_ID: (id: string) => `/users/${id}`,
   USER_DETAIL_BY_ID: (id: string) => `/users/${id}/detail`,
+  USER_PERMISSIONS_BY_ID: (id: string) => `/users/${id}/permissions`,
   USERS_BY_ROLE: (role: string) => `/users?role=${role}`,
 
   // Buildings
