@@ -20,6 +20,7 @@ import {
   CreditCard,
   ChevronDown,
   ChevronRight,
+  ClipboardList,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useState } from 'react';
@@ -29,7 +30,14 @@ export default function ManagerLayout() {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [openBusMenu, setOpenBusMenu] = useState(false);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+
+  const toggleMenu = (key: string) => {
+    setOpenMenus((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
 
   const handleLogout = () => {
     logout();
@@ -39,12 +47,12 @@ export default function ManagerLayout() {
   const menuItems = [
     { path: '/manager', icon: LayoutDashboard, label: 'Overview' },
     { path: '/manager/notifications', icon: Bell, label: 'Notifications' },
-    { path: '/manager/orders', icon: ShoppingCart, label: 'Orders' },
     { path: '/manager/parking', icon: ParkingCircle, label: 'Parking' },
     {
       icon: Bus,
       label: 'Bus',
       path: '/manager/bus',
+      key: 'bus',
       children: [
         {
           path: '/manager/bus/routes',
@@ -64,7 +72,24 @@ export default function ManagerLayout() {
     { path: '/manager/buildings', icon: Building, label: 'Buildings' },
     { path: '/manager/facilities', icon: Landmark, label: 'Facilities' },
     { path: '/manager/reservations', icon: Calendar, label: 'Reservations' },
-    { path: '/manager/restaurants', icon: UtensilsCrossed, label: 'Restaurants' },
+    {
+      path: '/manager/restaurants',
+      icon: UtensilsCrossed,
+      label: 'Restaurants',
+      key: 'restaurant',
+      children: [
+        {
+          path: '/manager/menus',
+          label: 'Menus',
+          icon: ClipboardList,
+        },
+        {
+          path: '/manager/orders',
+          label: 'Orders',
+          icon: ShoppingCart,
+        },
+      ],
+    },
   ];
 
   return (
@@ -95,8 +120,10 @@ export default function ManagerLayout() {
               location.pathname === item.path ||
               (item.path !== '/manager' && location.pathname.startsWith(item.path));
 
-            // 🔹 MENU BUS
             if (item.children) {
+              const isOpen = openMenus[item.key];
+              const ItemIcon = item.icon;
+
               return (
                 <div
                   key={item.label}
@@ -105,7 +132,7 @@ export default function ManagerLayout() {
                     marginBottom: 0,
                   }}
                 >
-                  {/* BUS MENU */}
+                  {/* PARENT MENU */}
                   <Button
                     variant={isActive ? 'secondary' : 'ghost'}
                     onClick={() => {
@@ -119,17 +146,18 @@ export default function ManagerLayout() {
                       justifyContent: 'flex-start',
                     }}
                   >
-                    <Bus className="size-4 mr-3" />
-                    Bus
+                    <ItemIcon className="size-4 mr-3" />
+                    {item.label}
+
                     {/* ICON TOGGLE */}
                     <span
                       style={{ marginLeft: 'auto' }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setOpenBusMenu((prev) => !prev);
+                        toggleMenu(item.key);
                       }}
                     >
-                      {openBusMenu ? (
+                      {isOpen ? (
                         <ChevronDown className="size-4" />
                       ) : (
                         <ChevronRight className="size-4" />
@@ -138,7 +166,7 @@ export default function ManagerLayout() {
                   </Button>
 
                   {/* SUB MENU – DROP DOWN */}
-                  {openBusMenu && (
+                  {isOpen && (
                     <div
                       style={{
                         marginTop: 0,
