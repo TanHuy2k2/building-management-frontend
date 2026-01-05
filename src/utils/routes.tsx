@@ -27,6 +27,7 @@ import UserNotifications from '../pages/user/Notifications';
 import BuildingManagement from '../pages/manager/BuildingManagement';
 import FacilityManagement from '../pages/manager/FacilityManagement';
 import RestaurantManagement from '../pages/manager/RestaurantManagement';
+import MenuManagement from '../pages/manager/MenuManagement';
 
 export const router = createBrowserRouter([
   {
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
       { path: 'facilities', Component: FacilityManagement },
       { path: 'reservations', Component: ReservationManagement },
       { path: 'restaurants', Component: RestaurantManagement },
+      { path: 'menus', Component: MenuManagement },
     ],
   },
   {

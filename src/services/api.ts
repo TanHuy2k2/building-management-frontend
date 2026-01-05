@@ -63,18 +63,25 @@ export const API_ENDPOINTS = {
   RESTAURANT_CREATE: '/restaurants/create',
   RESTAURANT_STATS: '/restaurants/stats',
   RESTAURANT_BY_ID: (id: string) => `/restaurants/${id}`,
+  RESTAURANT_MENU: (id: string) => `/restaurants/${id}/menu`,
+  RESTAURANT_DAILY_SALE: (id: string) => `/restaurants/${id}/daily-sale`,
+  RESTAURANT_DISH_SALE: (id: string) => `/restaurants/${id}/dish-sale`,
   RESTAURANT_UPDATE: (id: string) => `/restaurants/update/${id}`,
   RESTAURANT_UPDATE_STATUS: (id: string) => `/restaurants/update-status/${id}`,
+
+  // Menu Schedules
+  MENU_SCHEDULES: '/menu_schedules',
+  MENU_SCHEDULE_CREATE: '/menu_schedules/create',
+  MENU_SCHEDULES_BY_ID: (id: string) => `/menu_schedules/${id}`,
+  MENU_SCHEDULES_ITEMS: (id: string) => `/menu_schedules/${id}/items`,
+  MENU_SCHEDULES_ITEMS_BY_ID: (id: string, itemId: string) =>
+    `/menu_schedules/${id}/items/${itemId}`,
 
   // Orders
   ORDERS: '/orders',
   ORDER_BY_ID: (id: string) => `/orders/${id}`,
   CREATE_ORDER: '/orders',
   UPDATE_ORDER_STATUS: (id: string) => `/orders/${id}/status`,
-
-  // Menu
-  MENU_ITEMS: '/menu',
-  MENU_ITEM_BY_ID: (id: string) => `/menu/${id}`,
 
   // Parking
   PARKING_SLOTS: '/parking/slots',
