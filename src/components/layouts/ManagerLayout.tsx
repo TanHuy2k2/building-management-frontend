@@ -16,6 +16,10 @@ import {
   Building,
   Landmark,
   UtensilsCrossed,
+  Map,
+  CreditCard,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useState } from 'react';
@@ -25,6 +29,7 @@ export default function ManagerLayout() {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [openBusMenu, setOpenBusMenu] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -36,7 +41,23 @@ export default function ManagerLayout() {
     { path: '/manager/notifications', icon: Bell, label: 'Notifications' },
     { path: '/manager/orders', icon: ShoppingCart, label: 'Orders' },
     { path: '/manager/parking', icon: ParkingCircle, label: 'Parking' },
-    { path: '/manager/bus', icon: Bus, label: 'Shuttle Bus' },
+    {
+      icon: Bus,
+      label: 'Bus',
+      path: '/manager/bus',
+      children: [
+        {
+          path: '/manager/bus/routes',
+          label: 'Routes',
+          icon: Map,
+        },
+        {
+          path: '/manager/bus-subscriptions',
+          label: 'Subscriptions',
+          icon: CreditCard,
+        },
+      ],
+    },
     { path: '/manager/events', icon: PartyPopper, label: 'Events' },
     { path: '/manager/users', icon: Users, label: 'Users' },
     { path: '/manager/reports', icon: FileText, label: 'Reports' },
@@ -74,6 +95,89 @@ export default function ManagerLayout() {
               location.pathname === item.path ||
               (item.path !== '/manager' && location.pathname.startsWith(item.path));
 
+            // 🔹 MENU BUS
+            if (item.children) {
+              return (
+                <div
+                  key={item.label}
+                  style={{
+                    position: 'relative',
+                    marginBottom: 0,
+                  }}
+                >
+                  {/* BUS MENU */}
+                  <Button
+                    variant={isActive ? 'secondary' : 'ghost'}
+                    onClick={() => {
+                      navigate(item.path);
+                      setSidebarOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-start',
+                    }}
+                  >
+                    <Bus className="size-4 mr-3" />
+                    Bus
+                    {/* ICON TOGGLE */}
+                    <span
+                      style={{ marginLeft: 'auto' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenBusMenu((prev) => !prev);
+                      }}
+                    >
+                      {openBusMenu ? (
+                        <ChevronDown className="size-4" />
+                      ) : (
+                        <ChevronRight className="size-4" />
+                      )}
+                    </span>
+                  </Button>
+
+                  {/* SUB MENU – DROP DOWN */}
+                  {openBusMenu && (
+                    <div
+                      style={{
+                        marginTop: 0,
+                        marginLeft: 10,
+                        backgroundColor: '#fff',
+                        padding: 6,
+                      }}
+                    >
+                      {item.children.map((child) => {
+                        const isSubActive =
+                          location.pathname === child.path ||
+                          location.pathname.startsWith(child.path + '/');
+
+                        const ChildIcon = child.icon;
+
+                        return (
+                          <Link key={child.path} to={child.path}>
+                            <Button
+                              variant={isSubActive ? 'secondary' : 'ghost'}
+                              style={{
+                                width: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'flex-start',
+                              }}
+                            >
+                              <ChildIcon size={14} style={{ marginRight: 10 }} />
+                              {child.label}
+                            </Button>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // MENU DEFAULT
             return (
               <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}>
                 <Button variant={isActive ? 'secondary' : 'ghost'} className="w-full justify-start">
