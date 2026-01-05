@@ -10,6 +10,7 @@ import OrdersManagement from '../pages/manager/OrdersManagement';
 import ReservationManagement from '../pages/manager/ReservationManagement';
 import ParkingManagement from '../pages/manager/ParkingManagement';
 import BusManagement from '../pages/manager/BusManagement';
+import BusSubscriptionManagement from '../pages/manager/BusSubscriptionManagement';
 import EventsManagement from '../pages/manager/EventsManagement';
 import UserManagement from '../pages/manager/UserManagement';
 import ReportsPage from '../pages/manager/ReportsPage';
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
       { path: 'orders', Component: OrdersManagement },
       { path: 'parking', Component: ParkingManagement },
       { path: 'bus', Component: BusManagement },
+      { path: 'bus-subscriptions', Component: BusSubscriptionManagement },
       { path: 'events', Component: EventsManagement },
       { path: 'users', Component: UserManagement },
       { path: 'reports', Component: ReportsPage },

@@ -82,6 +82,8 @@ export const API_ENDPOINTS = {
   CREATE_PARKING_REGISTRATION: '/parking/registrations',
 
   // Bus
+  BUS: '/buses',
+  BUS_STATS: '/buses/stats',
   BUS_ROUTES: '/bus/routes',
   BUS_SCHEDULES: '/bus/schedules',
   BUS_BOOKINGS: '/bus/bookings',

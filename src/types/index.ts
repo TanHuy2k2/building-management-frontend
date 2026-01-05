@@ -6,6 +6,7 @@ export * from './facility';
 export * from './restaurant';
 export * from './facilityReservation';
 export * from './parkingSpace';
+export * from './bus';
 
 export interface MenuItem {
   id: string;
