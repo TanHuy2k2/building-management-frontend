@@ -88,6 +88,10 @@ export const API_ENDPOINTS = {
   BUS_SCHEDULES: '/bus/schedules',
   BUS_BOOKINGS: '/bus/bookings',
   CREATE_BUS_BOOKING: '/bus/bookings',
+  CREATE_BUS: '/buses',
+  UPDATE_BUS: (id: string) => `/buses/${id}`,
+  UPDATE_BUS_STATUS: (id: string) => `/buses/update-status/${id}`,
+  BUS_BY_ID: (id: string) => `/buses/${id}`,
 
   // Events
   EVENTS: '/events',
