@@ -41,3 +41,14 @@ export interface GetBusParams {
   order_by?: string;
   order?: OrderDirection;
 }
+
+export interface BusForm {
+  type_name: string;
+  number: number;
+  plate_number: string;
+  capacity: number;
+  model: string;
+  description?: string;
+  features?: string[];
+  driver_id?: string;
+}
