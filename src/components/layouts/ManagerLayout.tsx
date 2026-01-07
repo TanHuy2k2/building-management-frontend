@@ -56,7 +56,7 @@ export default function ManagerLayout() {
       key: 'bus',
       children: [
         {
-          path: '/manager/bus/routes',
+          path: '/manager/bus-routes',
           label: 'Routes',
           icon: Map,
         },

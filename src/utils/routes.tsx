@@ -28,6 +28,7 @@ import BuildingManagement from '../pages/manager/BuildingManagement';
 import FacilityManagement from '../pages/manager/FacilityManagement';
 import RestaurantManagement from '../pages/manager/RestaurantManagement';
 import MenuManagement from '../pages/manager/MenuManagement';
+import BusRouteManagement from '../pages/manager/BusRouteManagement';
 
 export const router = createBrowserRouter([
   {
@@ -44,6 +45,7 @@ export const router = createBrowserRouter([
       { path: 'orders', Component: OrdersManagement },
       { path: 'parking', Component: ParkingManagement },
       { path: 'bus', Component: BusManagement },
+      { path: 'bus-routes', Component: BusRouteManagement },
       { path: 'bus-subscriptions', Component: BusSubscriptionManagement },
       { path: 'events', Component: EventsManagement },
       { path: 'users', Component: UserManagement },
