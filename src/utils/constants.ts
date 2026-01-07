@@ -28,3 +28,13 @@ export const DAY_ORDER: DayOfWeek[] = [
   DayOfWeek.THURSDAY,
   DayOfWeek.FRIDAY,
 ];
+
+export const WEEK_DAYS = [
+  { key: 'monday', label: '2' },
+  { key: 'tuesday', label: '3' },
+  { key: 'wednesday', label: '4' },
+  { key: 'thursday', label: '5' },
+  { key: 'friday', label: '6' },
+  { key: 'saturday', label: '7' },
+  { key: 'sunday', label: 'CN' },
+];

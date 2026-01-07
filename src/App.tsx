@@ -2,6 +2,7 @@ import { RouterProvider } from 'react-router';
 import { router } from './utils/routes';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
+import 'leaflet/dist/leaflet.css';
 
 export default function App() {
   return (
