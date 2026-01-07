@@ -20,10 +20,10 @@ import { updatePassword, updateUserProfile } from '../../services/userService';
 import { User as UserInterface } from '../../types';
 import { Label } from '../../components/ui/label';
 import { Input } from '../../components/ui/input';
+import { ENV, POINT_VALUE } from '../../utils/constants';
 
 export default function UserProfile() {
   const { currentUser } = useAuth();
-  const POINT_VALUE = 1000;
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -33,7 +33,6 @@ export default function UserProfile() {
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [passwordEditOpen, setPasswordEditOpen] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const { BE_URL } = process.env;
 
   useEffect(() => {
     if (currentUser) setUser({ ...currentUser });
@@ -100,19 +99,21 @@ export default function UserProfile() {
 
     const formData = new FormData();
     let hasUpdates = false;
-
     if (user.full_name !== currentUser.full_name) {
       formData.append('full_name', user.full_name);
       hasUpdates = true;
     }
+
     if (user.username !== currentUser.username) {
       formData.append('username', user.username);
       hasUpdates = true;
     }
+
     if (user.phone !== currentUser.phone) {
       formData.append('phone', user.phone);
       hasUpdates = true;
     }
+
     if (selectedFile) {
       formData.append('user-images', selectedFile);
       hasUpdates = true;
@@ -120,6 +121,7 @@ export default function UserProfile() {
 
     if (!hasUpdates) {
       toast.error('No changes to update');
+
       return;
     }
 
@@ -148,7 +150,9 @@ export default function UserProfile() {
 
   const getAvatarSrc = () => {
     if (avatarPreview) return avatarPreview;
-    if (user?.image_url) return `${BE_URL}/${user.image_url}`;
+
+    if (user?.image_url) return `${ENV.BE_URL}/${user.image_url}`;
+
     return '';
   };
 

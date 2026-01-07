@@ -35,6 +35,7 @@ import {
   DEFAULT_PAGE_SIZE,
   DEFAULT_AVATAR_URL,
   DEFAULT_PAGE_TOTAL,
+  ENV,
 } from '../../utils/constants';
 import { getPaginationNumbers } from '../../utils/pagination';
 import {
@@ -73,7 +74,6 @@ export default function UserManagement() {
   });
   const [originalPermissions, setOriginalPermissions] = useState<Permission[]>([]);
   const [allPermissions, setAllPermissions] = useState<PermissionInterface[]>([]);
-  const { BE_URL } = process.env;
 
   const fetchUserStats = async () => {
     try {
@@ -81,7 +81,7 @@ export default function UserManagement() {
       if (!res.success) return;
 
       setUserStats(res.data);
-    } catch (error) {
+    } catch (error: any) {
       toast.error(error);
     }
   };
@@ -90,9 +90,9 @@ export default function UserManagement() {
     try {
       const res: ResponseInterface = await getAllPermissions();
       if (!res.success) return;
-      
+
       setAllPermissions(res.data);
-    } catch (error) {
+    } catch (error: any) {
       toast.error(error);
     }
   };
@@ -131,7 +131,7 @@ export default function UserManagement() {
       try {
         setLoading(true);
         await Promise.all([fetchUserStats(), fetchPermissions()]);
-      } catch (err) {
+      } catch (err: any) {
         toast.error(err);
       } finally {
         setLoading(false);
@@ -248,10 +248,8 @@ export default function UserManagement() {
 
     try {
       setLoading(true);
-      const res: ResponseInterface = await updateUserPermissions(
-        activeUser.id,
-        activeUser.permissions || [],
-      );
+      const uniquePermissions = Array.from(new Set(activeUser.permissions || []));
+      const res: ResponseInterface = await updateUserPermissions(activeUser.id, uniquePermissions);
       if (!res.success) {
         toast.error(res.message || 'Failed to update permissions');
 
@@ -273,7 +271,7 @@ export default function UserManagement() {
   const resolveAvatar = (imageUrl?: string | null) => {
     if (!imageUrl) return DEFAULT_AVATAR_URL;
 
-    return imageUrl.startsWith('http') ? imageUrl : `${BE_URL}/${imageUrl}`;
+    return imageUrl.startsWith('http') ? imageUrl : `${ENV.BE_URL}/${imageUrl}`;
   };
 
   return (

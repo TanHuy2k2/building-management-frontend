@@ -1,7 +1,7 @@
-const API_BASE_URL = process.env.BE_API_URL;
+import { ENV } from '../utils/constants';
 
 export async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${ENV.BE_API_URL}${endpoint}`, {
     ...options,
   });
 
