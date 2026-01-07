@@ -1,10 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { ArrowLeft, UtensilsCrossed, CalendarPlus, Trash2, Store } from 'lucide-react';
+import {
+  ArrowLeft,
+  UtensilsCrossed,
+  CalendarPlus,
+  Trash2,
+  Edit,
+  Eye,
+  Plus,
+  Pencil,
+  ArrowRight,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Building, Restaurant } from '../../types';
-import { getAllRestaurantsApi } from '../../services/restaurantService';
-import { getMenuSchedulesApi } from '../../services/restaurantMenuService';
+import { Restaurant } from '../../types';
+import { createMenuScheduleApi, getMenuSchedulesApi } from '../../services/restaurantMenuService';
 import {
   DayOfWeek,
   DishCategory,
@@ -13,9 +22,19 @@ import {
   MenuForm,
   MenuScheduleForm,
 } from '../../types/menu';
-import { DAY_LABEL } from '../../utils/constants';
+import { DAY_LABEL, DEFAULT_FOOD_IMG_URL, ENV, HTTP_PREFIX } from '../../utils/constants';
 import { getNextDay } from '../../utils/time';
-import { getAllBuildingApi } from '../../services/buildingService';
+import { useRestaurant } from '../../contexts/RestaurantContext';
+import RestaurantSelector from './RestaurantSelector';
+import { Button } from '../../components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '../../components/ui/dialog';
 
 const mockDishes: MenuItemForm[] = [
   {
@@ -53,15 +72,13 @@ const mockDishes: MenuItemForm[] = [
 ];
 
 export default function MenuManagement() {
-  const [buildings, setBuildings] = useState<Building[]>([]);
-  const [buildingMap, setBuildingMap] = useState<Record<string, string>>({});
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const { currentRestaurant, setCurrentRestaurant } = useRestaurant();
   const [menuSchedules, setMenuSchedules] = useState<MenuSchedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedDay, setSelectedDay] = useState<DayOfWeek | ''>('');
   const [selectedItems, setSelectedItems] = useState<MenuItemForm[]>([]);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [dishQuery, setDishQuery] = useState('');
   const [showDishDropdown, setShowDishDropdown] = useState(false);
   const [menuForm, setMenuForm] = useState<MenuForm>({ schedules: [], images: [] });
@@ -74,6 +91,20 @@ export default function MenuManagement() {
     description: '',
     image_urls: [],
   });
+  const [activeSchedule, setActiveSchedule] = useState<MenuSchedule | null>(null);
+  const [modalMode, setModalMode] = useState<'view' | 'edit' | null>(null);
+  const [imageIndexMap, setImageIndexMap] = useState<Record<string, number>>({});
+  const [erroredImages, setErroredImages] = useState<Record<string, boolean>>({});
+
+  const resolveImageUrl = (url?: string) => {
+    if (!url) return DEFAULT_FOOD_IMG_URL;
+
+    return url.startsWith(HTTP_PREFIX) ? url : `${ENV.BE_URL}/${url}`;
+  };
+
+  const handleImageError = (itemId: string) => {
+    setErroredImages((prev) => ({ ...prev, [itemId]: true }));
+  };
 
   const isDishSelected = (dishName: string) =>
     selectedItems.some((item) => item.name.toLowerCase() === dishName.toLowerCase());
@@ -82,70 +113,28 @@ export default function MenuManagement() {
       dish.name.toLowerCase().includes(dishQuery.toLowerCase()) && !isDishSelected(dish.name),
   );
 
-  const fetchBuildings = async () => {
-    try {
-      const res = await getAllBuildingApi();
-      if (!res.success) {
-        toast.error(res.message);
-
-        return;
-      }
-
-      const map: Record<string, string> = {};
-      res.data.buildings.forEach((b: Building) => {
-        map[b.id] = b.name;
-      });
-      setBuildings(res.data.buildings);
-      setBuildingMap(map);
-    } catch {
-      toast.error('Failed to load buildings');
-    }
-  };
-
-  const fetchRestaurants = async () => {
+  const loadMenuSchedules = async (restaurantId: string) => {
     try {
       setLoading(true);
-      const res = await getAllRestaurantsApi();
+      const res = await getMenuSchedulesApi(restaurantId);
       if (!res.success) {
         toast.error(res.message);
 
         return;
       }
 
-      setRestaurants(res.data.restaurants);
-    } catch {
-      toast.error('Failed to load restaurants');
+      const schedules = res.data.schedules.filter((s: MenuSchedule) => s.items?.length);
+      setMenuSchedules(schedules);
+    } catch (err: any) {
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
   };
-
-  const fetchMenuSchedules = async () => {
-    try {
-      setLoading(true);
-      const res = await getMenuSchedulesApi();
-      if (!res.success) {
-        toast.error(res.message);
-
-        return;
-      }
-
-      setMenuSchedules(res.data);
-    } catch {
-      toast.error('Failed to load menu schedules');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchRestaurants();
-    fetchBuildings();
-  }, []);
 
   const handleSelectRestaurant = async (restaurant: Restaurant) => {
-    setSelectedRestaurant(restaurant);
-    await fetchMenuSchedules();
+    setCurrentRestaurant(restaurant);
+    loadMenuSchedules(restaurant.id);
   };
 
   const handleAddExistingDish = (dish: MenuItemForm) => {
@@ -161,7 +150,7 @@ export default function MenuManagement() {
   };
 
   const handleSaveSchedule = () => {
-    if (!selectedDay || selectedItems.length === 0) {
+    if (!selectedDay || !selectedItems.length) {
       toast.error('Please select a day and at least one dish');
 
       return;
@@ -178,131 +167,72 @@ export default function MenuManagement() {
     setSelectedDay('');
   };
 
-  const handleSubmitForm = () => {};
+  const handleSubmitForm = async () => {
+    if (!currentRestaurant) {
+      toast.error('Please select a restaurant first');
 
-  if (!selectedRestaurant) {
-    const activeRestaurants = restaurants.filter((r) => r.status === 'active');
-    const groupedRestaurants = activeRestaurants.reduce<Record<string, Restaurant[]>>((acc, r) => {
-      const key = r.building_id;
-      if (!acc[key]) acc[key] = [];
+      return;
+    }
 
-      acc[key].push(r);
+    if (!menuForm.schedules.length) {
+      toast.error('Please add at least one schedule before submitting');
 
-      return acc;
-    }, {});
+      return;
+    }
 
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <div>
-          <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 4 }}>Select Restaurant</h1>
-          <p style={{ fontSize: 14, color: '#6b7280' }}>
-            Choose a restaurant to manage menu schedules
-          </p>
-        </div>
+    const formData = new FormData();
+    selectedImages.forEach((file) => formData.append('menu-images', file));
+    formData.append('schedules', JSON.stringify(menuForm.schedules));
+    try {
+      setLoading(true);
 
-        {loading ? (
-          <p>Loading...</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            {Object.entries(groupedRestaurants).map(([buildingId, list]) => (
-              <div key={buildingId} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {/* Building title */}
-                <h2 style={{ fontSize: 16, fontWeight: 600 }}>{buildingMap[buildingId]}</h2>
+      const res = await createMenuScheduleApi(currentRestaurant.id, formData);
+      if (!res.success) {
+        toast.error(res.message || 'Failed to submit menu');
 
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(4, 1fr)',
-                    gap: 16,
-                  }}
-                >
-                  {list.map((restaurant) => (
-                    <Card
-                      key={restaurant.id}
-                      onClick={() => handleSelectRestaurant(restaurant)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <CardContent
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          height: '100%',
-                          padding: 16,
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 16,
-                            width: '100%',
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: 40,
-                              height: 40,
-                              borderRadius: 10,
-                              backgroundColor: '#eff6ff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
-                            }}
-                          >
-                            <Store size={20} color="#2563eb" />
-                          </div>
+        return;
+      }
 
-                          <div style={{ overflow: 'hidden' }}>
-                            <div
-                              style={{
-                                fontSize: 14,
-                                fontWeight: 600,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                              }}
-                            >
-                              {restaurant.name}
-                            </div>
+      toast.success('Menu submitted successfully!');
+      setMenuForm({ schedules: [], images: [] });
+      setSelectedImages([]);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                            <div
-                              style={{
-                                fontSize: 12,
-                                color: '#6b7280',
-                                marginTop: 2,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                              }}
-                            >
-                              Floor {restaurant.floor}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
+  useEffect(() => {
+    if (currentRestaurant?.id) {
+      loadMenuSchedules(currentRestaurant.id);
+    }
+  }, [currentRestaurant?.id]);
+
+  useEffect(() => {
+    if (activeSchedule) {
+      const newMap: Record<string, number> = {};
+      activeSchedule.items.forEach((item) => {
+        newMap[item.id] = 0;
+      });
+      setImageIndexMap(newMap);
+    }
+  }, [activeSchedule]);
+
+  if (!currentRestaurant) {
+    return <RestaurantSelector onSelect={handleSelectRestaurant} />;
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => setSelectedRestaurant(null)}>
+        <button onClick={() => setCurrentRestaurant(null)}>
           <ArrowLeft size={16} />
         </button>
 
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 600 }}>
-            {selectedRestaurant.name} – Menu Management
+            {currentRestaurant.name} – Menu Management
           </h1>
           <p style={{ fontSize: 14, color: '#6b7280' }}>Create and manage menu schedules</p>
         </div>
@@ -310,6 +240,7 @@ export default function MenuManagement() {
 
       <button
         onClick={() => setShowCreateForm((prev) => !prev)}
+        disabled={loading}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -370,7 +301,8 @@ export default function MenuManagement() {
                   border: '1px solid #e5e7eb',
                 }}
               />
-              {showDishDropdown && filteredDishes.length > 0 && (
+
+              {showDishDropdown && filteredDishes.length && (
                 <div
                   style={{
                     position: 'absolute',
@@ -399,8 +331,10 @@ export default function MenuManagement() {
                   ))}
                 </div>
               )}
+
               <button
                 onClick={() => setShowNewDishForm(true)}
+                disabled={loading}
                 style={{
                   padding: '6px 12px',
                   borderRadius: 8,
@@ -438,6 +372,7 @@ export default function MenuManagement() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button
                 onClick={handleSaveSchedule}
+                disabled={loading}
                 style={{
                   padding: '8px 16px',
                   borderRadius: 8,
@@ -510,75 +445,154 @@ export default function MenuManagement() {
               background: '#fff',
               borderRadius: 12,
               padding: 24,
-              minWidth: 360,
-              maxWidth: 480,
+              minWidth: 600,
+              maxWidth: 800,
               display: 'flex',
               flexDirection: 'column',
-              gap: 12,
+              gap: 16,
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Add New Dish</h2>
+            <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Add New Dish</h2>
 
-            <input
-              placeholder="Dish Name"
-              value={newDishForm.name}
-              onChange={(e) => setNewDishForm({ ...newDishForm, name: e.target.value })}
-              style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', width: '100%' }}
-            />
-
-            <input
-              type="number"
-              placeholder="Price"
-              value={newDishForm.price}
-              onChange={(e) => setNewDishForm({ ...newDishForm, price: Number(e.target.value) })}
-              style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', width: '100%' }}
-            />
-
-            <textarea
-              placeholder="Description"
-              value={newDishForm.description}
-              onChange={(e) => setNewDishForm({ ...newDishForm, description: e.target.value })}
-              style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', width: '100%' }}
-              rows={3}
-            />
-
-            {/* Custom file input */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label
-                htmlFor="dishFiles"
-                style={{
-                  padding: '8px 12px',
-                  background: '#3b82f6',
-                  color: '#fff',
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                }}
-              >
-                Choose Images
-              </label>
-              <input
-                id="dishFiles"
-                type="file"
-                multiple
-                style={{ display: 'none' }}
-                onChange={(e) => {
-                  const files = e.target.files;
-                  if (!files) return;
-
-                  const urls = Array.from(files).map((f) => f.name);
-                  setNewDishForm({ ...newDishForm, image_urls: urls });
-                }}
-              />
-              {newDishForm.image_urls && (
-                <div style={{ fontSize: 12, color: '#4b5563' }}>
-                  Selected: {newDishForm.image_urls.join(', ')}
+            <div style={{ display: 'flex', gap: 16 }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <label style={{ fontWeight: 600, fontSize: 14 }}>Dish Name</label>
+                  <input
+                    placeholder="Enter dish name"
+                    value={newDishForm.name}
+                    onChange={(e) => setNewDishForm({ ...newDishForm, name: e.target.value })}
+                    style={{
+                      padding: 10,
+                      borderRadius: 8,
+                      border: '1px solid #ccc',
+                      width: '100%',
+                    }}
+                  />
                 </div>
-              )}
+
+                {/* Price */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <label style={{ fontWeight: 600, fontSize: 14 }}>Price</label>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="Enter price"
+                    value={newDishForm.price}
+                    onChange={(e) =>
+                      setNewDishForm({ ...newDishForm, price: Number(e.target.value) })
+                    }
+                    style={{
+                      padding: 10,
+                      borderRadius: 8,
+                      border: '1px solid #ccc',
+                      width: '100%',
+                    }}
+                  />
+                </div>
+
+                {/* Quantity */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <label style={{ fontWeight: 600, fontSize: 14 }}>Quantity</label>
+                  <input
+                    type="number"
+                    min={1}
+                    placeholder="Enter quantity"
+                    value={newDishForm.quantity}
+                    onChange={(e) =>
+                      setNewDishForm({ ...newDishForm, quantity: Number(e.target.value) })
+                    }
+                    style={{
+                      padding: 10,
+                      borderRadius: 8,
+                      border: '1px solid #ccc',
+                      width: '100%',
+                    }}
+                  />
+                </div>
+
+                {/* Category */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <label style={{ fontWeight: 600, fontSize: 14 }}>Category</label>
+                  <select
+                    value={newDishForm.category}
+                    onChange={(e) =>
+                      setNewDishForm({ ...newDishForm, category: e.target.value as DishCategory })
+                    }
+                    style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #ccc' }}
+                  >
+                    {Object.values(DishCategory).map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Right column */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* Description */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <label style={{ fontWeight: 600, fontSize: 14 }}>Description</label>
+                  <textarea
+                    placeholder="Enter description"
+                    value={newDishForm.description}
+                    onChange={(e) =>
+                      setNewDishForm({ ...newDishForm, description: e.target.value })
+                    }
+                    style={{
+                      padding: 10,
+                      borderRadius: 8,
+                      border: '1px solid #ccc',
+                      width: '100%',
+                    }}
+                    rows={5}
+                  />
+                </div>
+
+                {/* Images */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <label style={{ fontWeight: 600, fontSize: 14 }}>Images</label>
+                  <label
+                    htmlFor="dishFiles"
+                    style={{
+                      padding: '8px 12px',
+                      background: '#3b82f6',
+                      color: '#fff',
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                    }}
+                  >
+                    Choose Images
+                  </label>
+                  <input
+                    id="dishFiles"
+                    type="file"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const files = e.target.files;
+                      if (!files) return;
+
+                      setSelectedImages((prev) => [...prev, ...Array.from(files)]);
+                      const urls = Array.from(files).map((f) => f.name);
+                      setNewDishForm((prev) => ({ ...prev, image_urls: urls }));
+                    }}
+                  />
+                  {newDishForm.image_urls && (
+                    <div style={{ fontSize: 12, color: '#4b5563' }}>
+                      Selected: {newDishForm.image_urls.join(', ')}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
+            {/* Buttons */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
               <button
                 onClick={() => setShowNewDishForm(false)}
                 style={{
@@ -620,7 +634,7 @@ export default function MenuManagement() {
         </div>
       )}
 
-      {menuForm.schedules.length > 0 && (
+      {!!menuForm.schedules.length && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600 }}>Saved Schedules</h2>
           {menuForm.schedules.map((s, idx) => (
@@ -657,8 +671,13 @@ export default function MenuManagement() {
           ))}
         </div>
       )}
-
-      {menuSchedules.length === 0 ? (
+      {loading ? (
+        <Card>
+          <CardContent style={{ textAlign: 'center', padding: 32 }}>
+            Loading menu schedules...
+          </CardContent>
+        </Card>
+      ) : !menuSchedules.length ? (
         <Card>
           <CardContent style={{ textAlign: 'center', padding: 32 }}>
             <UtensilsCrossed size={36} />
@@ -666,14 +685,234 @@ export default function MenuManagement() {
           </CardContent>
         </Card>
       ) : (
-        menuSchedules.map((s) => (
-          <Card key={s.id}>
-            <CardHeader>
-              <CardTitle>{DAY_LABEL[s.id]}</CardTitle>
-            </CardHeader>
-          </Card>
-        ))
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {menuSchedules.map((s) => (
+            <Card key={s.id}>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>{DAY_LABEL[s.id]}</CardTitle>
+
+                <div className="flex gap-2">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    title="View menu"
+                    className="w-9 h-9"
+                    onClick={() => {
+                      setActiveSchedule(s);
+                      setModalMode('view');
+                    }}
+                  >
+                    <Eye className="size-4" />
+                  </Button>
+
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    title="Edit menu"
+                    className="w-9 h-9"
+                    onClick={() => {
+                      setActiveSchedule(s);
+                      setModalMode('edit');
+                    }}
+                  >
+                    <Edit className="size-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+
+              <CardContent>
+                {s.items.map((item, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      fontSize: 14,
+                      padding: '6px 0',
+                      borderBottom: i < s.items.length - 1 ? '1px solid #e5e7eb' : undefined,
+                    }}
+                  >
+                    <strong>{item.name}</strong> — ${item.price} · Qty {item.quantity}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
+
+      <Dialog
+        open={!!activeSchedule}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActiveSchedule(null);
+            setModalMode('view');
+          }
+        }}
+      >
+        <DialogContent
+          style={{
+            maxWidth: 1000,
+            width: '100%',
+            height: '85vh',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: 0,
+            overflow: 'hidden',
+          }}
+        >
+          {activeSchedule && (
+            <>
+              {/* ===== HEADER ===== */}
+              <DialogHeader className="px-6 py-4 border-b shrink-0">
+                <div>
+                  <DialogTitle className="text-xl">
+                    {DAY_LABEL[activeSchedule.id]} – {activeSchedule.items.length} dishes
+                  </DialogTitle>
+                  <DialogDescription>
+                    Manage page for {DAY_LABEL[activeSchedule.id]} menu
+                  </DialogDescription>
+                </div>
+              </DialogHeader>
+
+              {/* ===== BODY ===== */}
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  padding: '24px',
+                  minHeight: 0,
+                }}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {activeSchedule.items.map((item) => {
+                    const images =
+                      item.image_urls && item.image_urls.length
+                        ? item.image_urls
+                        : [DEFAULT_FOOD_IMG_URL];
+                    const currentIndex = imageIndexMap[item.id] ?? 0;
+                    const currentImage = images[currentIndex];
+
+                    return (
+                      <Card
+                        key={item.id}
+                        className="relative overflow-hidden hover:shadow-md transition flex flex-col"
+                      >
+                        <div
+                          className="relative flex-shrink-0 group"
+                          style={{
+                            width: '100%',
+                            aspectRatio: '4/3',
+                            overflow: 'hidden',
+                            background: '#f3f4f6',
+                          }}
+                        >
+                          <img
+                            key={currentImage}
+                            src={
+                              erroredImages[`${item.id}-${currentImage}`]
+                                ? DEFAULT_FOOD_IMG_URL
+                                : resolveImageUrl(currentImage)
+                            }
+                            alt={item.name}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              display: 'block',
+                            }}
+                            onError={() => handleImageError(`${item.id}-${currentImage}`)}
+                          />
+
+                          {images.length > 1 && (
+                            <>
+                              <Button
+                                size="icon"
+                                variant="secondary"
+                                className="absolute top-1/2 h-8 w-8 rounded-md bg-white hover:bg-gray-100 shadow-md transition z-20"
+                                style={{ left: 8, transform: 'translateY(-50%)' }}
+                                onClick={() =>
+                                  setImageIndexMap((prev) => ({
+                                    ...prev,
+                                    [item.id]: (currentIndex - 1 + images.length) % images.length,
+                                  }))
+                                }
+                              >
+                                <ArrowLeft
+                                  style={{ width: 24, height: 24 }}
+                                  className="text-black"
+                                />
+                              </Button>
+
+                              <Button
+                                size="icon"
+                                variant="secondary"
+                                className="absolute top-1/2 h-8 w-8 rounded-md bg-white hover:bg-gray-100 shadow-md transition z-20"
+                                style={{ right: 8, transform: 'translateY(-50%)' }}
+                                onClick={() =>
+                                  setImageIndexMap((prev) => ({
+                                    ...prev,
+                                    [item.id]: (currentIndex + 1) % images.length,
+                                  }))
+                                }
+                              >
+                                <ArrowRight
+                                  style={{ width: 24, height: 24 }}
+                                  className="text-black"
+                                />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+
+                        {modalMode === 'edit' && (
+                          <Button
+                            size="icon"
+                            variant="secondary"
+                            className="absolute h-8 w-8 rounded-md bg-gray-200 hover:bg-gray-300 shadow-md transition z-30"
+                            style={{ top: 8, right: 8 }}
+                            onClick={() => toast('Edit clicked')}
+                          >
+                            <Pencil style={{ width: 20, height: 20 }} className="text-black" />
+                          </Button>
+                        )}
+
+                        <CardContent className="p-4 space-y-1 flex-1">
+                          <p className="font-semibold line-clamp-1">{item.name}</p>
+                          <p className="text-sm text-muted-foreground">Qty {item.quantity}</p>
+                          <p className="text-sm text-muted-foreground">{item.description}</p>
+                          <p className="font-medium">${item.price}</p>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+
+                  {modalMode === 'edit' && (
+                    <button
+                      onClick={() => toast('Add clicked')}
+                      className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg text-muted-foreground hover:text-primary hover:border-primary transition min-h-[220px]"
+                    >
+                      <Plus className="size-8 mb-2" />
+                      <span className="text-sm">Add dish</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* ===== FOOTER ===== */}
+              <DialogFooter className="px-6 py-4 border-t shrink-0">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setActiveSchedule(null);
+                    setModalMode('view');
+                  }}
+                >
+                  Close
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

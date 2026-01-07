@@ -56,3 +56,12 @@ export interface GetRestaurantsParams {
   order_by?: string;
   order?: OrderDirection;
 }
+
+export interface RestaurantContextType {
+  currentRestaurant: Restaurant | null;
+  setCurrentRestaurant: React.Dispatch<React.SetStateAction<Restaurant | null>>;
+}
+
+export interface RestaurantSelectorProps {
+  onSelect: (restaurant: Restaurant) => void;
+}
