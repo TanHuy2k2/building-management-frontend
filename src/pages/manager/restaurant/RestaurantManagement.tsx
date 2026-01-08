@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import { Input } from '../../components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
+import { Button } from '../../../components/ui/button';
+import { Badge } from '../../../components/ui/badge';
+import { Input } from '../../../components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../components/ui/select';
+} from '../../../components/ui/select';
 import {
   Building,
   BuildingStatus,
@@ -18,7 +18,7 @@ import {
   Restaurant,
   RestaurantForm,
   RestaurantStatus,
-} from '../../types';
+} from '../../../types';
 import {
   Utensils,
   Search,
@@ -31,7 +31,7 @@ import {
   Home,
   ChevronDown,
 } from 'lucide-react';
-import { getBuildingByIdApi } from '../../services/buildingService';
+import { getBuildingByIdApi } from '../../../services/buildingService';
 import {
   getAllRestaurantsApi,
   getRestaurantByIdApi,
@@ -39,7 +39,7 @@ import {
   updateRestaurantApi,
   updateRestaurantStatusApi,
   getAllRestaurantsStatsApi,
-} from '../../services/restaurantService';
+} from '../../../services/restaurantService';
 import toast from 'react-hot-toast';
 import {
   Dialog,
@@ -48,18 +48,18 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '../../components/ui/dialog';
-import { getChangedFields, removeEmptyFields } from '../../utils/updateFields';
-import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
-import { Command, CommandInput, CommandItem, CommandList } from '../../components/ui/command';
+} from '../../../components/ui/dialog';
+import { getChangedFields, removeEmptyFields } from '../../../utils/updateFields';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
+import { Command, CommandInput, CommandItem, CommandList } from '../../../components/ui/command';
 import { Check } from 'lucide-react';
 import {
   DEFAULT_ORDER_BY,
   DEFAULT_PAGE,
   DEFAULT_PAGE_TOTAL,
   DEFAULT_PAGE_SIZE,
-} from '../../utils/constants';
-import { getPaginationNumbers } from '../../utils/pagination';
+} from '../../../utils/constants';
+import { getPaginationNumbers } from '../../../utils/pagination';
 
 export default function RestaurantManagement() {
   const [buildings, setBuildings] = useState<Building[]>();
