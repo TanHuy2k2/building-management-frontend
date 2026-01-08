@@ -14,6 +14,9 @@ import BusSubscriptionManagement from '../pages/manager/BusSubscriptionManagemen
 import EventsManagement from '../pages/manager/EventsManagement';
 import UserManagement from '../pages/manager/UserManagement';
 import ReportsPage from '../pages/manager/ReportsPage';
+import BusRouteManagement from '../pages/manager/BusRouteManagement';
+import RestaurantManagement from '../pages/manager/restaurant/RestaurantManagement';
+import MenuManagement from '../pages/manager/menu/MenuManagement';
 
 // User Pages
 import UserHome from '../pages/user/Home';
@@ -26,9 +29,6 @@ import UserProfile from '../pages/user/Profile';
 import UserNotifications from '../pages/user/Notifications';
 import BuildingManagement from '../pages/manager/BuildingManagement';
 import FacilityManagement from '../pages/manager/FacilityManagement';
-import RestaurantManagement from '../pages/manager/RestaurantManagement';
-import MenuManagement from '../pages/manager/MenuManagement';
-import BusRouteManagement from '../pages/manager/BusRouteManagement';
 
 export const router = createBrowserRouter([
   {

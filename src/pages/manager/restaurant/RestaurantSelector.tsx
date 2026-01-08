@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Card, CardContent } from '../../components/ui/card';
 import { Store } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Building, Restaurant, RestaurantSelectorProps, RestaurantStatus } from '../../types';
-import { getAllRestaurantsApi } from '../../services/restaurantService';
-import { getAllBuildingApi } from '../../services/buildingService';
+import { Building, Restaurant, RestaurantSelectorProps, RestaurantStatus } from '../../../types';
+import { getAllRestaurantsApi } from '../../../services/restaurantService';
+import { getAllBuildingApi } from '../../../services/buildingService';
+import { Card, CardContent } from '../../../components/ui/card';
 
 export default function RestaurantSelector({ onSelect }: RestaurantSelectorProps) {
   const [buildingMap, setBuildingMap] = useState<Record<string, string>>({});

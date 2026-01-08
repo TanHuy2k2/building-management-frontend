@@ -59,3 +59,50 @@ export async function createMenuScheduleApi(
     throw new Error(error.message);
   }
 }
+
+export async function addMenuItemApi(
+  restaurantId: string,
+  menuId: string,
+  data: FormData,
+): Promise<ResponseInterface> {
+  try {
+    const token = await getAccessToken();
+
+    return await apiRequest(
+      `${API_ENDPOINTS.RESTAURANT_BY_ID(restaurantId)}${API_ENDPOINTS.MENU_SCHEDULES_ITEMS(menuId)}`,
+      {
+        method: 'POST',
+        body: data,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
+
+export async function updateMenuItemApi(
+  restaurantId: string,
+  menuId: string,
+  itemId: string,
+  data: FormData,
+): Promise<ResponseInterface> {
+  try {
+    const token = await getAccessToken();
+
+    return await apiRequest(
+      `${API_ENDPOINTS.RESTAURANT_BY_ID(restaurantId)}${API_ENDPOINTS.MENU_SCHEDULES_ITEMS_BY_ID(menuId, itemId)}`,
+      {
+        method: 'PATCH',
+        body: data,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
