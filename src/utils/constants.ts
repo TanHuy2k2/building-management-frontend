@@ -11,6 +11,7 @@ export const HTTP_PREFIX = 'http';
 export const ENV = {
   BE_URL: process.env.BE_URL ?? '',
   BE_API_URL: process.env.BE_API_URL ?? '',
+  OPEN_ROUTE_KEY: process.env.OPEN_ROUTE_KEY ?? '',
 } as const;
 
 export const DAY_LABEL: Record<DayOfWeek, string> = {
@@ -35,6 +36,4 @@ export const WEEK_DAYS = [
   { key: 'wednesday', label: '4' },
   { key: 'thursday', label: '5' },
   { key: 'friday', label: '6' },
-  { key: 'saturday', label: '7' },
-  { key: 'sunday', label: 'CN' },
 ];

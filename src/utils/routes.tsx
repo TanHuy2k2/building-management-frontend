@@ -14,7 +14,7 @@ import BusSubscriptionManagement from '../pages/manager/BusSubscriptionManagemen
 import EventsManagement from '../pages/manager/EventsManagement';
 import UserManagement from '../pages/manager/UserManagement';
 import ReportsPage from '../pages/manager/ReportsPage';
-import BusRouteManagement from '../pages/manager/BusRouteManagement';
+import BusRouteManagement from '../pages/manager/busRoute/BusRouteManagement';
 import RestaurantManagement from '../pages/manager/restaurant/RestaurantManagement';
 import MenuManagement from '../pages/manager/menu/MenuManagement';
 

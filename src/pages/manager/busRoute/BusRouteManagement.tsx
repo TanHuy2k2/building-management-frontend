@@ -1,77 +1,13 @@
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import RouteMap from './BusRouteMap';
-import { BusRoute, ActiveStatus, BusStop, DayOfWeek } from '../../types';
-import { WEEK_DAYS } from '../../utils/constants';
-
-const MOCK_ROUTES: BusRoute[] = [
-  {
-    id: 'route-001',
-    route_name: 'Terminal → City Center',
-    route_code: 'BX01',
-    description: 'Main route during peak hours',
-    bus_id: ['bus-01', 'bus-02'],
-    departure_time: new Date('2025-01-01T06:00:00'),
-    estimated_duration: 45,
-    status: ActiveStatus.ACTIVE,
-    operating_dates: [
-      DayOfWeek.MONDAY,
-      DayOfWeek.TUESDAY,
-      DayOfWeek.WEDNESDAY,
-      DayOfWeek.THURSDAY,
-      DayOfWeek.FRIDAY,
-    ],
-    created_by: 'admin',
-    stops: [
-      {
-        stop_id: 'stop-001',
-        stop_name: 'Bus Terminal',
-        order: 1,
-        estimated_arrival: 0,
-        location: '10.762622,106.660172',
-      },
-      {
-        stop_id: 'stop-002',
-        stop_name: 'Central Park',
-        order: 2,
-        estimated_arrival: 15,
-        location: '10.770000,106.670000',
-      },
-      {
-        stop_id: 'stop-003',
-        stop_name: 'City Center',
-        order: 3,
-        estimated_arrival: 30,
-        location: '10.776500,106.700000',
-      },
-    ],
-  },
-  {
-    id: 'route-002',
-    route_name: 'University → Industrial Zone',
-    route_code: 'UNI05',
-    departure_time: new Date(),
-    estimated_duration: 60,
-    status: ActiveStatus.ACTIVE,
-    operating_dates: [DayOfWeek.MONDAY, DayOfWeek.FRIDAY],
-    created_by: 'admin',
-    stops: [
-      {
-        stop_id: 'stop-101',
-        stop_name: 'University Gate',
-        order: 1,
-        estimated_arrival: 0,
-        location: '10.870000,106.800000',
-      },
-      {
-        stop_id: 'stop-102',
-        stop_name: 'Industrial Zone',
-        order: 2,
-        estimated_arrival: 60,
-        location: '10.900000,106.820000',
-      },
-    ],
-  },
-];
+import { BusRoute, ActiveStatus, BusStop } from '../../../types';
+import { WEEK_DAYS } from '../../../utils/constants';
+import toast from 'react-hot-toast';
+import { getAllBusRouteApi } from '../../../services/busRouteService';
+import { getBusByIdApi } from '../../../services/busService';
+import CreateRouteDialog from './CreateBusRouteDialog';
+import { Button } from '../../../components/ui/button';
+import { Edit } from 'lucide-react';
 
 const styles = {
   title: {
@@ -86,7 +22,7 @@ const styles = {
     gap: 4,
   },
   day: {
-    width: 80,
+    width: 30,
     height: 30,
     borderRadius: '50%',
     display: 'flex',
@@ -97,7 +33,7 @@ const styles = {
     transition: 'all 0.2s ease',
   } as React.CSSProperties,
   activeDay: {
-    backgroundColor: '#2563eb', // blue-600
+    backgroundColor: '#2563eb',
     color: '#ffffff',
     boxShadow: '0 4px 8px rgba(37, 99, 235, 0.35)',
   },
@@ -108,8 +44,69 @@ const styles = {
 };
 
 export default function BusRouteManagement() {
-  const [routes] = useState(MOCK_ROUTES);
+  const [routes, setRoutes] = useState<BusRoute[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(routes[0]);
+  const [busPlateNumbers, setBusPlateNumbers] = useState<Record<string, string>>({});
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+
+  const fetchRoutes = async () => {
+    try {
+      const res = await getAllBusRouteApi();
+      if (!res.success) {
+        toast.error(res.message);
+        return;
+      }
+
+      setRoutes(res.data);
+
+      // Collect all unique bus IDs
+      const allBusIds = new Set<string>();
+      res.data.forEach((route: BusRoute) => {
+        if (route.bus_id && route.bus_id.length > 0) {
+          route.bus_id.forEach((id: string) => allBusIds.add(id));
+        }
+      });
+
+      // Fetch bus details once for all unique IDs
+      const busDetailsMap: Record<string, string> = {};
+      await Promise.all(
+        Array.from(allBusIds).map(async (busId) => {
+          try {
+            const busRes = await getBusByIdApi(busId);
+            if (!busRes.success) {
+              toast.error(busRes.message);
+
+              return;
+            }
+
+            busDetailsMap[busId] = busRes.data.plate_number;
+          } catch (error: any) {
+            toast.error(`Error fetching bus ${busId}:`, error);
+          }
+        }),
+      );
+
+      // Map plate numbers to routes
+      const plateNumberMap: Record<string, string> = {};
+      res.data.forEach((route: BusRoute) => {
+        if (route.bus_id && !route.bus_id.length) {
+          const plateNumbers = route.bus_id
+            .map((id: string) => busDetailsMap[id])
+            .filter(Boolean)
+            .join(', ');
+          plateNumberMap[route.id] = plateNumbers;
+        }
+      });
+
+      setBusPlateNumbers(plateNumberMap);
+    } catch (error) {
+      toast.error('Cannot load bus statistics');
+    }
+  };
+
+  useEffect(() => {
+    fetchRoutes();
+  }, []);
 
   return (
     <div className="flex h-screen">
@@ -117,7 +114,9 @@ export default function BusRouteManagement() {
       <aside className="w-72 bg-white border-r p-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="font-semibold text-lg">🚌 Routes</h2>
-          <button className="text-sm text-blue-600">+ Add</button>
+          <button className="text-sm text-blue-600" onClick={() => setIsCreateDialogOpen(true)}>
+            + Add
+          </button>
         </div>
 
         <div className="space-y-1">
@@ -165,7 +164,9 @@ export default function BusRouteManagement() {
                   {selectedRoute.status.toUpperCase()}
                 </span>
 
-                <button className="px-3 py-1 bg-blue-600 text-white rounded">✏️ Edit</button>
+                <Button size="icon" variant="secondary" title="Edit Bus Route" className="w-9 h-9">
+                  <Edit className="size-4" />
+                </Button>
               </div>
             </div>
 
@@ -183,30 +184,37 @@ export default function BusRouteManagement() {
                 </div>
               </div>
 
-              <section>
-                <h3 style={styles.title}>📅 Operating days</h3>
-
-                <div style={styles.daysWrapper}>
-                  {WEEK_DAYS.map((day) => {
-                    const active = selectedRoute.operating_dates
-                      ?.map((d) => d.toLowerCase())
-                      .includes(day.key);
-
-                    return (
-                      <div
-                        key={day.key}
-                        style={{
-                          ...styles.day,
-                          ...(active ? styles.activeDay : styles.inactiveDay),
-                        }}
-                      >
-                        {day.label}
-                      </div>
-                    );
-                  })}
+              <div className="p-4 rounded-lg bg-gray-50 border">
+                <div className="text-sm text-gray-500">🚌 Assigned Buses</div>
+                <div className="font-semibold text-lg">
+                  {busPlateNumbers[selectedRoute.id] || 'No buses assigned'}
                 </div>
-              </section>
+              </div>
             </div>
+
+            {/* Operating Days */}
+            <section>
+              <h3 style={styles.title}>📅 Operating days</h3>
+              <div style={styles.daysWrapper}>
+                {WEEK_DAYS.map((day) => {
+                  const active = selectedRoute.operating_dates
+                    ?.map((d) => d.toLowerCase())
+                    .includes(day.key);
+
+                  return (
+                    <div
+                      key={day.key}
+                      style={{
+                        ...styles.day,
+                        ...(active ? styles.activeDay : styles.inactiveDay),
+                      }}
+                    >
+                      {day.label}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
 
             {/* Stops + Map */}
             <div className="grid grid-cols-5 gap-6">
@@ -233,6 +241,14 @@ export default function BusRouteManagement() {
             </div>
           </div>
         )}
+        {/* Dialog */}
+        <CreateRouteDialog
+          open={isCreateDialogOpen}
+          onOpenChange={() => setIsCreateDialogOpen(false)}
+          onSuccess={() => {
+            fetchRoutes();
+          }}
+        />
       </main>
     </div>
   );

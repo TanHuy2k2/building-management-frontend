@@ -29,3 +29,10 @@ export const getNextDay = (day: DayOfWeek) => {
   if (idx === -1 || idx === DAY_ORDER.length - 1) return null;
   return DAY_ORDER[idx + 1];
 };
+
+export const formatTimeForInput = (date: Date): string => {
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+
+  return `${hours}:${minutes}`;
+};
