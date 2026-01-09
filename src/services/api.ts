@@ -91,7 +91,6 @@ export const API_ENDPOINTS = {
   // Bus
   BUS: '/buses',
   BUS_STATS: '/buses/stats',
-  BUS_ROUTES: '/bus/routes',
   BUS_SCHEDULES: '/bus/schedules',
   BUS_BOOKINGS: '/bus/bookings',
   CREATE_BUS_BOOKING: '/bus/bookings',
@@ -99,6 +98,9 @@ export const API_ENDPOINTS = {
   UPDATE_BUS: (id: string) => `/buses/${id}`,
   UPDATE_BUS_STATUS: (id: string) => `/buses/update-status/${id}`,
   BUS_BY_ID: (id: string) => `/buses/${id}`,
+
+  // Bus Route
+  BUS_ROUTES: '/bus_routes',
 
   // Events
   EVENTS: '/events',
