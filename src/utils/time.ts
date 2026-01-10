@@ -30,9 +30,14 @@ export const getNextDay = (day: DayOfWeek) => {
   return DAY_ORDER[idx + 1];
 };
 
-export const formatTimeForInput = (date: Date): string => {
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
+export const formatTimeForInput = (date?: Date | string | null): string => {
+  if (!date) return '';
+
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return '';
+
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
 
   return `${hours}:${minutes}`;
 };

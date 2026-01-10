@@ -101,6 +101,7 @@ export const API_ENDPOINTS = {
 
   // Bus Route
   BUS_ROUTES: '/bus_routes',
+  UPDATE_BUS_ROUTE: (id: string) => `/bus_routes/${id}`,
 
   // Events
   EVENTS: '/events',
