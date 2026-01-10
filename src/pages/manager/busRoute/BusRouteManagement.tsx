@@ -8,6 +8,7 @@ import { getBusByIdApi } from '../../../services/busService';
 import CreateRouteDialog from './CreateBusRouteDialog';
 import { Button } from '../../../components/ui/button';
 import { Edit } from 'lucide-react';
+import UpdateAssignedBusDialog from './UpdateAssignedBusDialog';
 
 const styles = {
   title: {
@@ -48,6 +49,8 @@ export default function BusRouteManagement() {
   const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(routes[0]);
   const [busPlateNumbers, setBusPlateNumbers] = useState<Record<string, string>>({});
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isUpdateBusDialogOpen, setIsUpdateBusDialogOpen] = useState(false);
 
   const fetchRoutes = async () => {
     try {
@@ -62,7 +65,7 @@ export default function BusRouteManagement() {
       // Collect all unique bus IDs
       const allBusIds = new Set<string>();
       res.data.forEach((route: BusRoute) => {
-        if (route.bus_id && route.bus_id.length > 0) {
+        if (route.bus_id && route.bus_id.length) {
           route.bus_id.forEach((id: string) => allBusIds.add(id));
         }
       });
@@ -86,10 +89,14 @@ export default function BusRouteManagement() {
         }),
       );
 
+      setSelectedRoute((prev) =>
+        prev ? (res.data.find((r: BusRoute) => r.id === prev.id) ?? null) : null,
+      );
+
       // Map plate numbers to routes
       const plateNumberMap: Record<string, string> = {};
       res.data.forEach((route: BusRoute) => {
-        if (route.bus_id && !route.bus_id.length) {
+        if (route.bus_id && route.bus_id.length) {
           const plateNumbers = route.bus_id
             .map((id: string) => busDetailsMap[id])
             .filter(Boolean)
@@ -164,7 +171,15 @@ export default function BusRouteManagement() {
                   {selectedRoute.status.toUpperCase()}
                 </span>
 
-                <Button size="icon" variant="secondary" title="Edit Bus Route" className="w-9 h-9">
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  title="Edit Bus Route"
+                  className="w-9 h-9"
+                  onClick={() => {
+                    setIsEditDialogOpen(true);
+                  }}
+                >
                   <Edit className="size-4" />
                 </Button>
               </div>
@@ -184,7 +199,10 @@ export default function BusRouteManagement() {
                 </div>
               </div>
 
-              <div className="p-4 rounded-lg bg-gray-50 border">
+              <div
+                className="p-4 rounded-lg bg-gray-50 border cursor-pointer hover:bg-gray-100 transition"
+                onClick={() => setIsUpdateBusDialogOpen(true)}
+              >
                 <div className="text-sm text-gray-500">🚌 Assigned Buses</div>
                 <div className="font-semibold text-lg">
                   {busPlateNumbers[selectedRoute.id] || 'No buses assigned'}
@@ -249,6 +267,27 @@ export default function BusRouteManagement() {
             fetchRoutes();
           }}
         />
+        {selectedRoute && (
+          <>
+            <CreateRouteDialog
+              open={isEditDialogOpen}
+              onOpenChange={setIsEditDialogOpen}
+              initialData={selectedRoute}
+              onSuccess={() => {
+                fetchRoutes();
+              }}
+            />
+
+            <UpdateAssignedBusDialog
+              open={isUpdateBusDialogOpen}
+              onOpenChange={setIsUpdateBusDialogOpen}
+              route={selectedRoute}
+              onSuccess={() => {
+                fetchRoutes();
+              }}
+            />
+          </>
+        )}
       </main>
     </div>
   );

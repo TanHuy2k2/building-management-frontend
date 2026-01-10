@@ -35,3 +35,24 @@ export async function createBusRouteApi(data: Partial<BusRoute>): Promise<Respon
     throw new Error(error.message);
   }
 }
+
+export async function updateBusRouteApi(
+  id: string,
+  data: Partial<BusRoute>,
+): Promise<ResponseInterface> {
+  try {
+    const accessToken = await getAccessToken();
+    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.UPDATE_BUS_ROUTE(id), {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    return response;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}

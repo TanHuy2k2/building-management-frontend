@@ -1,11 +1,19 @@
 export const removeEmptyFields = (obj: any): any => {
   if (!obj || typeof obj !== 'object') return obj;
 
+  if (obj instanceof Date) return obj;
+
   return Object.entries(obj).reduce(
     (acc, [key, value]) => {
       if (value === '' || value == null) return acc;
 
-      if (Array.isArray(value) && value.length === 0) return acc;
+      if (value instanceof Date) {
+        acc[key] = value;
+
+        return acc;
+      }
+
+      if (Array.isArray(value) && !value.length) return acc;
 
       if (typeof value === 'object') {
         const cleaned = removeEmptyFields(value);
