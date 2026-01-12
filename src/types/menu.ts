@@ -58,3 +58,6 @@ export interface MenuItemForm {
   image_urls?: string[];
 }
 
+export interface MenuItem extends MenuItemForm {
+  id: string;
+}

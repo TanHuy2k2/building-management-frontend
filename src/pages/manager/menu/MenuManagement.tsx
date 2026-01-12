@@ -15,6 +15,7 @@ import {
   addMenuItemApi,
   createMenuScheduleApi,
   getMenuSchedulesApi,
+  updateMenuItemApi,
 } from '../../../services/restaurantMenuService';
 import {
   Restaurant,
@@ -24,9 +25,11 @@ import {
   MenuItemForm,
   MenuForm,
   MenuScheduleForm,
+  MenuItem,
 } from '../../../types';
 import { DAY_LABEL, DEFAULT_FOOD_IMG_URL, ENV, HTTP_PREFIX } from '../../../utils/constants';
-import { removeEmptyFields } from '../../../utils/updateFields';
+import { resolveFoodImageUrl } from '../../../utils/image';
+import { getChangedFields, removeEmptyFields } from '../../../utils/updateFields';
 import { useRestaurant } from '../../../contexts/RestaurantContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
@@ -41,12 +44,13 @@ import {
 import RestaurantDishForm from './RestaurantDishForm';
 import RestaurantDishSelector from './RestaurantDishSelector';
 import RestaurantSelector from '../restaurant/RestaurantSelector';
+import { formatVND } from '../../../utils/currency';
 
 const mockDishes: MenuItemForm[] = [
   {
     name: 'New York Tenderloin Steak',
     category: DishCategory.MAIN,
-    price: 15,
+    price: 15000,
     quantity: 1,
     description: 'Tender New York strip steak grilled to perfection, served with garlic butter.',
     image_urls: ['steak.jpg', 'steak2.jpg'],
@@ -54,7 +58,7 @@ const mockDishes: MenuItemForm[] = [
   {
     name: 'Garlic Mashed Potatoes',
     category: DishCategory.SIDE,
-    price: 5,
+    price: 5000,
     quantity: 1,
     description: 'Creamy mashed potatoes with roasted garlic and butter.',
     image_urls: ['potatoes.jpg', 'potatoes2.jpg'],
@@ -62,7 +66,7 @@ const mockDishes: MenuItemForm[] = [
   {
     name: 'Caesar Salad',
     category: DishCategory.SIDE,
-    price: 6,
+    price: 6000,
     quantity: 1,
     description: 'Fresh romaine lettuce with Caesar dressing, croutons, and parmesan.',
     image_urls: ['dish.jpg', 'dish2.jpg'],
@@ -70,7 +74,7 @@ const mockDishes: MenuItemForm[] = [
   {
     name: 'Chocolate Cake',
     category: DishCategory.DESSERT,
-    price: 5,
+    price: 5000,
     quantity: 1,
     description: 'Rich and moist chocolate cake with chocolate ganache.',
     image_urls: ['dish7.jpg', 'dish8.jpg'],
@@ -81,10 +85,12 @@ export default function MenuManagement() {
   const scrollContainer = useRef<HTMLDivElement>(null);
   const { currentRestaurant, setCurrentRestaurant } = useRestaurant();
   const [menuSchedules, setMenuSchedules] = useState<MenuSchedule[]>([]);
-  const [selectedDay, setSelectedDay] = useState<DayOfWeek | ''>('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingDish, setEditingDish] = useState<MenuItemForm | null>(null);
   const [selectedDishes, setSelectedDishes] = useState<MenuItemForm[]>([]);
   const [selectedItems, setSelectedItems] = useState<MenuItemForm[]>([]);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek | ''>('');
   const [menuForm, setMenuForm] = useState<MenuForm>({ schedules: [], images: [] });
   const [activeSchedule, setActiveSchedule] = useState<MenuSchedule | null>(null);
   const [imageIndexMap, setImageIndexMap] = useState<Record<string, number>>({});
@@ -95,12 +101,6 @@ export default function MenuManagement() {
   const [showDishPicker, setShowDishPicker] = useState(false);
   const [showAddDishModal, setShowAddDishModal] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  const resolveImageUrl = (url?: string) => {
-    if (!url) return DEFAULT_FOOD_IMG_URL;
-
-    return url.startsWith(HTTP_PREFIX) ? url : `${ENV.BE_URL}/${url}`;
-  };
 
   const handleImageError = (itemId: string) => {
     setErroredImages((prev) => ({ ...prev, [itemId]: true }));
@@ -254,6 +254,44 @@ export default function MenuManagement() {
       toast.success(res.message);
       await loadMenuSchedules(currentRestaurant.id);
       setShowAddDishModal(false);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateMenuItem = async (newDish: MenuItemForm, images: File[]) => {
+    if (!currentRestaurant || !activeSchedule || !editingId || !editingDish) return;
+
+    const changedFields = removeEmptyFields(getChangedFields(editingDish, newDish));
+    if (!Object.keys(changedFields).length && !images.length) {
+      toast('No changes detected');
+
+      return;
+    }
+
+    const formData = buildMenuItemFormData(changedFields, images);
+    try {
+      setLoading(true);
+
+      const res = await updateMenuItemApi(
+        currentRestaurant.id,
+        activeSchedule.id,
+        editingId,
+        formData,
+      );
+      if (!res.success) {
+        toast.error(res.message);
+
+        return;
+      }
+
+      toast.success('Dish updated');
+      await loadMenuSchedules(currentRestaurant.id);
+
+      setShowAddDishModal(false);
+      setEditingDish(null);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -551,12 +589,19 @@ export default function MenuManagement() {
                               lineHeight: '1.4',
                               display: 'flex',
                               justifyContent: 'space-between',
+                              alignItems: 'center',
                             }}
                           >
-                            <span>
-                              {item.name} · Qty {item.quantity}
+                            {/* LEFT */}
+                            <span style={{ fontWeight: 500 }}>{item.name}</span>
+
+                            {/* RIGHT */}
+                            <span style={{ textAlign: 'right' }}>
+                              <div style={{ fontWeight: 600 }}>{formatVND(item.price)}</div>
+                              <div style={{ fontSize: 12, color: '#6b7280' }}>
+                                Qty {item.quantity}
+                              </div>
                             </span>
-                            <span>${item.price}</span>
                           </div>
                         ))}
                       </CardContent>
@@ -618,19 +663,22 @@ export default function MenuManagement() {
                 </div>
               </CardHeader>
 
-              <CardContent>
-                {s.items.map((item, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      fontSize: 14,
-                      padding: '6px 0',
-                      borderBottom: i < s.items.length - 1 ? '1px solid #e5e7eb' : undefined,
-                    }}
-                  >
-                    <strong>{item.name}</strong> — ${item.price} · Qty {item.quantity}
-                  </div>
-                ))}
+              <CardContent className="pt-2">
+                <div className="space-y-2">
+                  {s.items.map((item, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between border-b last:border-b-0 pb-2 text-sm"
+                    >
+                      <p className="font-medium truncate">{item.name}</p>
+                      <div className="flex flex-col items-end text-right">
+                        <span className="font-semibold">{formatVND(item.price)}</span>
+
+                        <span className="text-xs text-muted-foreground">Qty {item.quantity}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -681,6 +729,16 @@ export default function MenuManagement() {
                 }}
               >
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {modalMode === 'edit' && (
+                    <button
+                      onClick={() => setShowDishPicker(true)}
+                      className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg text-muted-foreground hover:text-primary hover:border-primary transition min-h-[220px]"
+                    >
+                      <Plus className="size-8 mb-2" />
+                      <span className="text-sm">Add dish</span>
+                    </button>
+                  )}
+
                   {activeSchedule.items.map((item) => {
                     const images =
                       item.image_urls && item.image_urls.length
@@ -708,7 +766,7 @@ export default function MenuManagement() {
                             src={
                               erroredImages[`${item.id}-${currentImage}`]
                                 ? DEFAULT_FOOD_IMG_URL
-                                : resolveImageUrl(currentImage)
+                                : resolveFoodImageUrl(currentImage)
                             }
                             alt={item.name}
                             style={{
@@ -767,7 +825,20 @@ export default function MenuManagement() {
                             variant="secondary"
                             className="absolute h-8 w-8 rounded-md bg-gray-200 hover:bg-gray-300 shadow-md transition z-30"
                             style={{ top: 8, right: 8 }}
-                            onClick={() => toast('Edit clicked')}
+                            onClick={() => {
+                              setEditingId(item.id);
+
+                              setEditingDish({
+                                name: item.name,
+                                category: item.category as DishCategory,
+                                price: item.price,
+                                quantity: item.quantity,
+                                description: item.description ?? '',
+                                image_urls: item.image_urls ?? [],
+                              });
+
+                              setShowAddDishModal(true);
+                            }}
                           >
                             <Pencil style={{ width: 20, height: 20 }} className="text-black" />
                           </Button>
@@ -777,21 +848,11 @@ export default function MenuManagement() {
                           <p className="font-semibold line-clamp-1">{item.name}</p>
                           <p className="text-sm text-muted-foreground">Qty {item.quantity}</p>
                           <p className="text-sm text-muted-foreground">{item.description}</p>
-                          <p className="font-medium">${item.price}</p>
+                          <p className="font-medium">{formatVND(item.price)}</p>
                         </CardContent>
                       </Card>
                     );
                   })}
-
-                  {modalMode === 'edit' && (
-                    <button
-                      onClick={() => setShowDishPicker(true)}
-                      className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg text-muted-foreground hover:text-primary hover:border-primary transition min-h-[220px]"
-                    >
-                      <Plus className="size-8 mb-2" />
-                      <span className="text-sm">Add dish</span>
-                    </button>
-                  )}
                 </div>
               </div>
 
@@ -879,8 +940,19 @@ export default function MenuManagement() {
       <RestaurantDishForm
         open={showAddDishModal}
         loading={loading}
-        onClose={() => setShowAddDishModal(false)}
-        onSubmit={handleAddMenuItem}
+        mode={editingDish ? 'edit' : 'create'}
+        initialData={editingDish ?? undefined}
+        onClose={() => {
+          setShowAddDishModal(false);
+          setEditingDish(null);
+        }}
+        onSubmit={(dish, images) => {
+          if (editingDish) {
+            handleUpdateMenuItem(dish, images);
+          } else {
+            handleAddMenuItem(dish, images);
+          }
+        }}
       />
     </div>
   );
