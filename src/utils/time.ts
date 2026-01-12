@@ -1,5 +1,5 @@
-import { DAY_ORDER } from './constants';
-import { DayOfWeek } from '../types';
+import { BUS_SPEED_KMH, DAY_ORDER } from './constants';
+import { BusStop, DayOfWeek } from '../types';
 
 export const formatDateVN = (date: Date | string) => {
   return new Date(date).toLocaleDateString('vi-VN', {
@@ -40,4 +40,38 @@ export const formatTimeForInput = (date?: Date | string | null): string => {
   const minutes = String(d.getMinutes()).padStart(2, '0');
 
   return `${hours}:${minutes}`;
+};
+
+export const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+
+  return 2 * R * Math.asin(Math.sqrt(a));
+};
+
+export const calcEstimatedArrival = (stops: BusStop[]) => {
+  let total = 0;
+
+  return stops.map((s, i) => {
+    if (i === 0) {
+      return { ...s, estimated_arrival: 0 };
+    }
+
+    const [lat1, lng1] = stops[i - 1].location.split(',').map(Number);
+    const [lat2, lng2] = s.location.split(',').map(Number);
+    const dist = haversineKm(lat1, lng1, lat2, lng2);
+    const minutes = (dist / BUS_SPEED_KMH) * 60;
+
+    total += Math.round(minutes);
+
+    return {
+      ...s,
+      estimated_arrival: total,
+    };
+  });
 };

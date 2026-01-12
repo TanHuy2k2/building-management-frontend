@@ -3,12 +3,13 @@ import RouteMap from './BusRouteMap';
 import { BusRoute, ActiveStatus, BusStop } from '../../../types';
 import { WEEK_DAYS } from '../../../utils/constants';
 import toast from 'react-hot-toast';
-import { getAllBusRouteApi } from '../../../services/busRouteService';
+import { getAllBusRouteApi, updateBusRouteApi } from '../../../services/busRouteService';
 import { getBusByIdApi } from '../../../services/busService';
 import CreateRouteDialog from './CreateBusRouteDialog';
 import { Button } from '../../../components/ui/button';
 import { Edit } from 'lucide-react';
 import UpdateAssignedBusDialog from './UpdateAssignedBusDialog';
+import MapPicker from './MapPicker';
 
 const styles = {
   title: {
@@ -51,6 +52,9 @@ export default function BusRouteManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isUpdateBusDialogOpen, setIsUpdateBusDialogOpen] = useState(false);
+  const [isMapPickerOpen, setIsMapPickerOpen] = useState(false);
+  const [pickedLocations, setPickedLocations] = useState<BusStop[]>([]);
+  const [isEditingStops, setIsEditingStops] = useState(false);
 
   const fetchRoutes = async () => {
     try {
@@ -237,24 +241,63 @@ export default function BusRouteManagement() {
             {/* Stops + Map */}
             <div className="grid grid-cols-5 gap-6">
               <div className="col-span-2">
-                <h3 className="font-semibold mb-3">🛑 Stops</h3>
-                <div className="space-y-2">
-                  {(selectedRoute.stops ?? []).map((s: BusStop) => (
-                    <div key={s.stop_id} className="p-3 border rounded hover:bg-gray-50">
-                      <div className="font-medium">
-                        {s.order}. {s.stop_name}
-                      </div>
-                      <div className="text-xs text-gray-500">ETA: {s.estimated_arrival} min</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                <div className="flex justify-between mb-3">
+                  <h3 className="font-semibold">🛑 Stops</h3>
 
-              <div className="col-span-3">
-                <h3 className="font-semibold mb-3">🗺 Route map</h3>
-                <Suspense fallback={<div>Loading map...</div>}>
-                  <RouteMap stops={selectedRoute.stops ?? []} />
-                </Suspense>
+                  {selectedRoute.stops?.length && (
+                    <button
+                      className="text-sm text-blue-600 hover:underline"
+                      onClick={() => {
+                        setIsEditingStops(true);
+                        setPickedLocations(
+                          (selectedRoute.stops ?? []).map((s) => {
+                            const [lng, lat] = s.location.split(',').map(Number);
+
+                            return {
+                              ...s,
+                              location: `${lat},${lng}`,
+                            };
+                          }),
+                        );
+                        setIsMapPickerOpen(true);
+                      }}
+                    >
+                      ✏️ Edit stops
+                    </button>
+                  )}
+                </div>
+
+                {selectedRoute.stops?.length ? (
+                  <div className="space-y-2">
+                    {selectedRoute.stops.map((s) => (
+                      <div key={s.stop_id} className="p-3 border rounded">
+                        <div className="font-medium">
+                          {s.order}. {s.stop_name}
+                        </div>
+                        <div className="text-xs text-gray-500">ETA: {s.estimated_arrival} min</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div
+                    className="p-4 border-2 border-dashed rounded text-center cursor-pointer"
+                    onClick={() => {
+                      setIsEditingStops(false);
+                      setPickedLocations([]);
+                      setIsMapPickerOpen(true);
+                    }}
+                  >
+                    🚫 No bus stops available
+                  </div>
+                )}
+                <div className="col-span-3">
+                  <h3 className="font-semibold mb-3">🗺 Route map</h3>
+                  {!isMapPickerOpen && (
+                    <Suspense fallback={<div>Loading map...</div>}>
+                      <RouteMap stops={selectedRoute.stops ?? []} />
+                    </Suspense>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -273,18 +316,92 @@ export default function BusRouteManagement() {
               open={isEditDialogOpen}
               onOpenChange={setIsEditDialogOpen}
               initialData={selectedRoute}
-              onSuccess={() => {
-                fetchRoutes();
-              }}
+              onSuccess={fetchRoutes}
             />
+
+            {isMapPickerOpen && (
+              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-5 w-[700px] flex flex-col">
+                  <h3 className="font-semibold mb-3">
+                    📍 {isEditingStops ? 'Edit stops' : 'Add stops'}
+                  </h3>
+
+                  <MapPicker value={pickedLocations} onChange={setPickedLocations} />
+
+                  {/* Selected stops list */}
+                  {pickedLocations.length > 0 && (
+                    <div className="mt-3 text-xs text-gray-600 space-y-1 max-h-32 overflow-auto border rounded p-2">
+                      {pickedLocations.map((s) => {
+                        return (
+                          <div key={s.stop_id} className="flex justify-between items-center">
+                            <div>
+                              <span className="font-medium">
+                                {s.order}. {s.stop_name}
+                              </span>
+                            </div>
+                            <div className="text-gray-500">ETA: {s.estimated_arrival} minutes</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2 mt-4">
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setIsMapPickerOpen(false);
+                        setPickedLocations([]);
+                        setIsEditingStops(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button
+                      disabled={!pickedLocations.length}
+                      onClick={async () => {
+                        try {
+                          const payload = {
+                            stops: pickedLocations.map((s, idx) => {
+                              const [lat, lng] = s.location.split(',').map(String);
+                              return {
+                                ...s,
+                                order: idx + 1,
+                                location: `${lng},${lat}`,
+                              };
+                            }),
+                          };
+
+                          const res = await updateBusRouteApi(selectedRoute.id, payload);
+                          if (!res.success) {
+                            toast.error(res.message);
+                            return;
+                          }
+
+                          toast.success('Stops updated');
+                          fetchRoutes();
+                        } catch {
+                          toast.error('Update failed');
+                        } finally {
+                          setIsMapPickerOpen(false);
+                          setPickedLocations([]);
+                          setIsEditingStops(false);
+                        }
+                      }}
+                    >
+                      Confirm ({pickedLocations.length})
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <UpdateAssignedBusDialog
               open={isUpdateBusDialogOpen}
               onOpenChange={setIsUpdateBusDialogOpen}
               route={selectedRoute}
-              onSuccess={() => {
-                fetchRoutes();
-              }}
+              onSuccess={fetchRoutes}
             />
           </>
         )}
