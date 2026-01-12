@@ -9,6 +9,7 @@ export const DEFAULT_FOOD_IMG_URL = '/images/default-food-image.jpg';
 export const POINT_VALUE = 1000;
 export const MAX_SHOWN_IMAGE_NAMES = 3;
 export const HTTP_PREFIX = 'http';
+export const BUS_SPEED_KMH = 25;
 export const ENV = {
   BE_URL: process.env.BE_URL ?? '',
   BE_API_URL: process.env.BE_API_URL ?? '',
