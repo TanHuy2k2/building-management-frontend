@@ -3,10 +3,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../compo
 import { Button } from '../../../components/ui/button';
 import { toast } from 'sonner';
 import { DishCategory, MenuItemForm } from '../../../types';
+import { resolveFoodImageUrl } from '../../../utils/image';
+import { MAX_SHOWN_IMAGE_NAMES } from '../../../utils/constants';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 type Props = {
   open: boolean;
   loading?: boolean;
+  mode?: 'create' | 'edit';
   initialData?: Partial<MenuItemForm>;
   onClose: () => void;
   onSubmit: (dish: MenuItemForm, images: File[]) => Promise<void> | void;
@@ -24,19 +28,34 @@ const DEFAULT_FORM: MenuItemForm = {
 export default function RestaurantDishForm({
   open,
   loading,
+  mode = 'create',
   initialData,
   onClose,
   onSubmit,
 }: Props) {
   const [form, setForm] = useState<MenuItemForm>(DEFAULT_FORM);
   const [images, setImages] = useState<File[]>([]);
+  const [previewIndex, setPreviewIndex] = useState(0);
+
+  const initialImageUrls = (initialData?.image_urls ?? []) as string[];
+  const previewImages = images.length
+    ? images.map((file) => URL.createObjectURL(file))
+    : initialImageUrls.map(resolveFoodImageUrl);
+  const currentPreview = previewImages[previewIndex];
 
   useEffect(() => {
-    if (open) {
-      setForm({ ...DEFAULT_FORM, ...initialData });
+    setPreviewIndex(0);
+  }, [images.length, initialImageUrls.length]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    setForm({ ...DEFAULT_FORM, ...initialData });
+
+    if (mode === 'create') {
       setImages([]);
     }
-  }, [open, initialData]);
+  }, [open, initialData, mode]);
 
   const handleSubmit = async () => {
     if (!form.name.trim()) {
@@ -47,22 +66,21 @@ export default function RestaurantDishForm({
 
     if (form.price <= 0) {
       toast.error('Price must be greater than 0');
-      
+
       return;
     }
 
     await onSubmit(form, images);
-    onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="w-full" style={{ maxWidth: 800 }}>
         <DialogHeader>
-          <DialogTitle>Add new dish</DialogTitle>
+          <DialogTitle>{mode === 'edit' ? 'Edit dish' : 'Add new dish'}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* LEFT */}
           <div className="space-y-4">
             {/* Name */}
@@ -117,7 +135,7 @@ export default function RestaurantDishForm({
             </div>
           </div>
 
-          {/* RIGHT */}
+          {/* MIDDLE */}
           <div className="space-y-4">
             {/* Description */}
             <div className="space-y-1">
@@ -155,16 +173,141 @@ export default function RestaurantDishForm({
                       ...f,
                       image_urls: merged.map((file) => file.name),
                     }));
+                    
                     return merged;
                   });
                 }}
               />
 
               {!!form.image_urls?.length && (
-                <p className="text-xs text-muted-foreground text-center">
-                  Selected: {form.image_urls.join(', ')}
-                </p>
+                <div className="w-full text-xs text-muted-foreground">
+                  <p className="font-medium mb-1">Selected images</p>
+
+                  <ul className="space-y-1">
+                    {form.image_urls.slice(0, MAX_SHOWN_IMAGE_NAMES).map((url, idx) => {
+                      const displayName = url.split('/').pop();
+
+                      return (
+                        <li key={idx} className="truncate max-w-full" title={displayName}>
+                          • {displayName}
+                        </li>
+                      );
+                    })}
+
+                    {form.image_urls.length > MAX_SHOWN_IMAGE_NAMES && (
+                      <li className="italic">
+                        +{form.image_urls.length - MAX_SHOWN_IMAGE_NAMES} more…
+                      </li>
+                    )}
+                  </ul>
+                </div>
               )}
+            </div>
+          </div>
+
+          {/* RIGHT */}
+          <div className="space-y-2">
+            <div className="relative rounded-md bg-gray-100 w-full" style={{ height: 220 }}>
+              {/* IMAGE */}
+              <div className="w-full h-full overflow-hidden rounded-md">
+                {currentPreview ? (
+                  <img
+                    src={currentPreview}
+                    alt="preview"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                    No image
+                  </div>
+                )}
+              </div>
+
+              {previewImages.length > 1 && (
+                <>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="absolute rounded-md bg-white hover:bg-gray-100 shadow-md transition"
+                    style={{
+                      left: 8,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 28,
+                      height: 28,
+                      zIndex: 20,
+                    }}
+                    onClick={() =>
+                      setPreviewIndex(
+                        (previewIndex - 1 + previewImages.length) % previewImages.length,
+                      )
+                    }
+                  >
+                    <ArrowLeft style={{ width: 20, height: 20 }} className="text-black" />
+                  </Button>
+
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="absolute rounded-md bg-white hover:bg-gray-100 shadow-md transition"
+                    style={{
+                      right: 8,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 28,
+                      height: 28,
+                      zIndex: 20,
+                    }}
+                    onClick={() => setPreviewIndex((previewIndex + 1) % previewImages.length)}
+                  >
+                    <ArrowRight style={{ width: 20, height: 20 }} className="text-black" />
+                  </Button>
+                </>
+              )}
+
+              {/* REMOVE */}
+              {previewImages.length > 0 && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="secondary"
+                  className="absolute rounded-md bg-white hover:bg-gray-100 shadow-md transition"
+                  style={{
+                    top: 8,
+                    right: 8,
+                    width: 28,
+                    height: 28,
+                    zIndex: 30,
+                  }}
+                  onClick={() => {
+                    setImages((prev) => {
+                      const next = prev.filter((_, i) => i !== previewIndex);
+
+                      setForm((f) => ({
+                        ...f,
+                        image_urls: next.length ? next.map((f) => f.name) : [],
+                      }));
+
+                      if (previewIndex >= next.length) {
+                        setPreviewIndex(Math.max(0, next.length - 1));
+                      }
+
+                      return next;
+                    });
+                  }}
+                >
+                  ✕
+                </Button>
+              )}
+            </div>
+
+            <div className="text-xs text-center text-muted-foreground">
+              {previewImages.length ? `${previewIndex + 1} / ${previewImages.length}` : 'No image'}
             </div>
           </div>
         </div>
@@ -176,7 +319,7 @@ export default function RestaurantDishForm({
           </Button>
 
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Saving...' : 'Add dish'}
+            {loading ? 'Saving...' : mode === 'edit' ? 'Update dish' : 'Add dish'}
           </Button>
         </div>
       </DialogContent>
