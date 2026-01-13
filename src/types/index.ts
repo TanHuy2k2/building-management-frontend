@@ -9,6 +9,7 @@ export * from './parkingSpace';
 export * from './bus';
 export * from './menu';
 export * from './busRoute';
+export * from './busSubscription';
 
 export interface MenuItem {
   id: string;

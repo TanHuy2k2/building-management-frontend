@@ -1,150 +1,301 @@
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
-import { mockBusRoutes, mockBusSchedules, mockBusBookings } from '../../data/mockData';
-import { Bus, MapPin, Clock, Users } from 'lucide-react';
+import { MapPin, Clock, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
+import { getAllBusSubscriptionApi } from '../../services/busSubscription';
+import { getAllBusRouteApi } from '../../services/busRouteService';
+import { getBusByIdApi } from '../../services/busService';
+import {
+  BusRoute,
+  BusSubscription,
+  BusSubscriptionStatus,
+  GetBusSubscriptionParams,
+} from '../../types';
+import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE } from '../../utils/constants';
+import { getUserById } from '../../services/userService';
+import { Button } from '../../components/ui/button';
+import { getPaginationNumbers } from '../../utils/pagination';
 
+/* ================= COMPONENT ================= */
 export default function BusSubscriptionManagement() {
-  const routes = mockBusRoutes;
-  const schedules = mockBusSchedules;
-  const bookings = mockBusBookings;
+  const [routes, setRoutes] = useState<BusRoute[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [subscriptions, setSubscriptions] = useState<BusSubscription[]>([]);
+  const [loadingSubs, setLoadingSubs] = useState(false);
+  const [busPlateNumbers, setBusPlateNumbers] = useState<Record<string, string>>({});
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
+  const [subPage, setSubPage] = useState(1);
+  const [subTotalPage, setSubTotalPage] = useState(1);
+
+  /* ================= FETCH ROUTES ================= */
+  const fetchRoutes = async () => {
+    try {
+      const res = await getAllBusRouteApi();
+      if (!res.success) {
+        toast.error(res.message);
+
+        return;
+      }
+
+      const routesData: BusRoute[] = res.data;
+      setRoutes(routesData);
+
+      /* collect unique bus ids */
+      const busIds = new Set<string>();
+      routesData.forEach((r) => r.bus_id?.forEach((id) => busIds.add(id)));
+
+      const plateMap: Record<string, string> = {};
+      await Promise.all(
+        Array.from(busIds).map(async (busId) => {
+          const busRes = await getBusByIdApi(busId);
+          if (busRes.success) {
+            plateMap[busId] = busRes.data.plate_number;
+          }
+        }),
+      );
+
+      /* map route -> plates */
+      const routePlateMap: Record<string, string> = {};
+      routesData.forEach((r) => {
+        routePlateMap[r.id] =
+          r.bus_id
+            ?.map((id) => plateMap[id])
+            .filter(Boolean)
+            .join(', ') ?? '';
+      });
+
+      setBusPlateNumbers(routePlateMap);
+    } catch {
+      toast.error('Cannot load routes');
+    }
+  };
+
+  /* ================= FETCH SUBSCRIPTIONS BY ROUTE ================= */
+  const fetchSubscriptionsByRoute = async (routeId: string, page = DEFAULT_PAGE) => {
+    try {
+      setLoadingSubs(true);
+
+      const params: GetBusSubscriptionParams = {
+        route_id: routeId,
+        page,
+        page_size: DEFAULT_PAGE_SIZE,
+      };
+      const res = await getAllBusSubscriptionApi(params);
+      if (!res.success) return toast.error(res.message);
+
+      const subs: BusSubscription[] = res.data.busSubscription ?? [];
+      setSubscriptions(subs);
+      setSubPage(res.data.pagination?.page ?? 1);
+      setSubTotalPage(res.data.pagination?.total_page ?? 1);
+
+      /* Fetch user names (only missing ones) */
+      const missingUserIds = Array.from(new Set(subs.map((s) => s.user_id))).filter(
+        (id) => !userNames[id],
+      );
+
+      await Promise.all(
+        missingUserIds.map(async (userId) => {
+          const userRes = await getUserById(userId);
+          if (userRes.success) {
+            setUserNames((prev) => ({
+              ...prev,
+              [userId]: userRes.data.full_name,
+            }));
+          }
+        }),
+      );
+    } catch {
+      toast.error('Cannot load subscriptions');
+    } finally {
+      setLoadingSubs(false);
+    }
+  };
+
+  /* ================= EFFECTS ================= */
+  useEffect(() => {
+    fetchRoutes();
+  }, []);
+
+  useEffect(() => {
+    const route = routes[selectedIndex];
+    if (route) {
+      setSubPage(DEFAULT_PAGE);
+      fetchSubscriptionsByRoute(route.id, DEFAULT_PAGE);
+    }
+  }, [routes, selectedIndex]);
+
+  /* ================= DERIVED ================= */
+  const confirmedSubs = subscriptions.filter((s) => s.status === BusSubscriptionStatus.RESERVED);
+  const currentRoute = routes[selectedIndex];
+  if (!currentRoute) {
+    return <p className="text-muted-foreground">No routes available</p>;
+  }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold">Bus Management</h1>
-        <p className="text-muted-foreground">Manage bus routes and schedules</p>
+        <h1 className="text-2xl font-semibold">Bus Subscription Management</h1>
+        <p className="text-muted-foreground">Manage subscriptions by route</p>
       </div>
 
-      {/* Routes */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Routes</h2>
-        {routes.map((route) => (
-          <Card key={route.id}>
-            <CardHeader>
-              <CardTitle className="text-base">{route.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-start gap-2">
-                    <MapPin className="size-4 text-green-600 mt-1" />
-                    <div>
-                      <p className="text-sm font-medium">Start Point</p>
-                      <p className="text-sm text-muted-foreground">{route.startPoint}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <MapPin className="size-4 text-red-600 mt-1" />
-                    <div>
-                      <p className="text-sm font-medium">End Point</p>
-                      <p className="text-sm text-muted-foreground">{route.endPoint}</p>
-                    </div>
-                  </div>
-                </div>
+      {/* Route Switch */}
+      <div className="flex items-center justify-between">
+        <button
+          disabled={selectedIndex === 0}
+          onClick={() => setSelectedIndex((i) => i - 1)}
+          className="p-2 border rounded disabled:opacity-50"
+        >
+          <ChevronLeft />
+        </button>
 
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Clock className="size-4 text-muted-foreground" />
-                    <span className="text-sm">{route.duration} minutes</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {route.price.toLocaleString()} VND / trip
-                    </span>
-                  </div>
-                </div>
-              </div>
+        <div className="text-center">
+          <h2 className="text-lg font-semibold">{currentRoute.route_name}</h2>
+          <p className="text-sm text-muted-foreground">
+            Bus: {busPlateNumbers[currentRoute.id] || '—'}
+          </p>
+        </div>
 
-              <div>
-                <p className="text-sm font-medium mb-2">Stops:</p>
-                <div className="flex flex-wrap gap-2">
-                  {route.stops.map((stop, idx) => (
-                    <Badge key={idx} variant="outline">
-                      {stop}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        <button
+          disabled={selectedIndex === routes.length - 1}
+          onClick={() => setSelectedIndex((i) => i + 1)}
+          className="p-2 border rounded disabled:opacity-50"
+        >
+          <ChevronRight />
+        </button>
       </div>
 
-      {/* Schedules */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Today’s Schedule</h2>
-        {schedules.map((schedule) => {
-          const route = routes.find((r) => r.id === schedule.routeId);
-          const occupancyRate = (schedule.bookedSeats / schedule.capacity) * 100;
+      {/* Route Detail */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Route details</CardTitle>
+        </CardHeader>
 
-          return (
-            <Card key={schedule.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Bus className="size-5" />
-                      {schedule.busNumber}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">{route?.name}</p>
-                  </div>
-                  <Badge className="bg-blue-100 text-blue-800">{schedule.departureTime}</Badge>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Stops */}
+          <div className="space-y-2">
+            {currentRoute.stops?.map((stop) => (
+              <div key={stop.stop_id} className="flex gap-2">
+                <MapPin className="size-4 mt-1 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Driver</p>
-                  <p className="text-sm font-medium">{schedule.driver}</p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2">
-                      <Users className="size-4" />
-                      Seats
-                    </span>
-                    <span>
-                      {schedule.bookedSeats}/{schedule.capacity}
-                    </span>
-                  </div>
-                  <Progress value={occupancyRate} />
-                  <p className="text-xs text-muted-foreground">
-                    {occupancyRate.toFixed(0)}% booked
+                  <p className="text-sm font-medium">
+                    {stop.order}. {stop.stop_name}
                   </p>
+                  <p className="text-xs text-muted-foreground">ETA {stop.estimated_arrival} min</p>
                 </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+              </div>
+            ))}
+          </div>
 
-      {/* Recent Bookings */}
+          {/* Meta */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Clock className="size-4" />
+              <span className="text-sm">{currentRoute.estimated_duration} minutes</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Users className="size-4" />
+              <span className="text-sm">{confirmedSubs.length} active subscriptions</span>
+            </div>
+
+            <Progress value={Math.min(confirmedSubs.length * 10, 100)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Subscriptions */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Recent Bookings</h2>
+        <h2 className="text-lg font-semibold">Subscriptions</h2>
+
         <Card>
           <CardContent className="p-0">
-            <div className="divide-y">
-              {bookings.map((booking) => (
-                <div key={booking.id} className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{booking.userName}</p>
-                    <p className="text-sm text-muted-foreground">{booking.routeName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(booking.date).toLocaleDateString('en-GB')} • {booking.departureTime}
-                    </p>
+            {loadingSubs ? (
+              <p className="p-4 text-center text-muted-foreground">Loading...</p>
+            ) : subscriptions.length === 0 ? (
+              <p className="p-4 text-center text-muted-foreground">No have subscriptions</p>
+            ) : (
+              <>
+                <div className="divide-y">
+                  {subscriptions.map((sub) => (
+                    <div key={sub.id} className="p-4 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">User: {userNames[sub.user_id] ?? sub.user_id}</p>
+                        <p className="text-sm text-muted-foreground">Seat {sub.seat_number}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(sub.start_time).toLocaleDateString()} →{' '}
+                          {new Date(sub.end_time).toLocaleDateString()}
+                        </p>
+                      </div>
+
+                      <Badge
+                        className={
+                          sub.status === BusSubscriptionStatus.RESERVED
+                            ? 'bg-green-100 text-green-600'
+                            : 'bg-yellow-100 text-yellow-600'
+                        }
+                      >
+                        {sub.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+
+                {/* PAGINATION */}
+                <div className="flex justify-center mt-4 gap-2">
+                  {/* Prev */}
+                  <Button
+                    variant="outline"
+                    disabled={subPage === 1}
+                    onClick={() => setSubPage((p) => Math.max(1, p - 1))}
+                  >
+                    Prev
+                  </Button>
+
+                  {/* Numbers */}
+                  <div className="flex gap-2">
+                    {getPaginationNumbers(subPage, subTotalPage).map((item, idx) => {
+                      if (item === '...') {
+                        return (
+                          <div key={idx} className="px-3 py-1 border rounded-lg text-gray-500">
+                            ...
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => setSubPage(Number(item))}
+                          style={{
+                            backgroundColor: subPage === item ? 'black' : 'white',
+                            color: subPage === item ? 'white' : 'black',
+                            padding: '0.25rem 0.75rem',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '0.5rem',
+                            transition: 'all 0.2s',
+                          }}
+                          className={subPage === item ? '' : 'hover:bg-gray-100'}
+                        >
+                          {item}
+                        </button>
+                      );
+                    })}
                   </div>
 
-                  <div className="text-right">
-                    <Badge variant="outline" className="bg-green-50 text-green-700">
-                      {booking.seats} seats
-                    </Badge>
-                    <p className="text-sm font-medium mt-1">{booking.price.toLocaleString()} VND</p>
-                  </div>
+                  {/* Next */}
+                  <Button
+                    variant="outline"
+                    disabled={subPage === subTotalPage}
+                    onClick={() => setSubPage((p) => Math.min(subTotalPage, p + 1))}
+                  >
+                    Next
+                  </Button>
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
