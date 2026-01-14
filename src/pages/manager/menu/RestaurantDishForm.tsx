@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../compo
 import { Button } from '../../../components/ui/button';
 import { toast } from 'sonner';
 import { DishCategory, MenuItemForm } from '../../../types';
-import { resolveFoodImageUrl } from '../../../utils/image';
+import { removeDishImageAtIndex, resolveFoodImageUrl } from '../../../utils/image';
 import { MAX_SHOWN_IMAGE_NAMES } from '../../../utils/constants';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
@@ -34,13 +34,15 @@ export default function RestaurantDishForm({
   onSubmit,
 }: Props) {
   const [form, setForm] = useState<MenuItemForm>(DEFAULT_FORM);
+  const [keptImageUrls, setKeptImageUrls] = useState<string[]>([]);
   const [images, setImages] = useState<File[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
 
   const initialImageUrls = (initialData?.image_urls ?? []) as string[];
-  const previewImages = images.length
-    ? images.map((file) => URL.createObjectURL(file))
-    : initialImageUrls.map(resolveFoodImageUrl);
+  const previewImages = [
+    ...keptImageUrls.map(resolveFoodImageUrl),
+    ...images.map((file) => URL.createObjectURL(file)),
+  ];
   const currentPreview = previewImages[previewIndex];
 
   useEffect(() => {
@@ -50,11 +52,14 @@ export default function RestaurantDishForm({
   useEffect(() => {
     if (!open) return;
 
-    setForm({ ...DEFAULT_FORM, ...initialData });
-
-    if (mode === 'create') {
-      setImages([]);
-    }
+    setForm({
+      ...DEFAULT_FORM,
+      ...initialData,
+      image_urls: mode === 'edit' ? (initialData?.image_urls ?? []) : [],
+    });
+    setKeptImageUrls(mode === 'edit' ? (initialData?.image_urls ?? []) : []);
+    setImages([]);
+    setPreviewIndex(0);
   }, [open, initialData, mode]);
 
   const handleSubmit = async () => {
@@ -71,6 +76,22 @@ export default function RestaurantDishForm({
     }
 
     await onSubmit(form, images);
+  };
+
+  const handleRemoveImage = () => {
+    const result = removeDishImageAtIndex({
+      previewIndex,
+      keptImageUrls,
+      images,
+    });
+
+    setKeptImageUrls(result.keptImageUrls);
+    setImages(result.images);
+    setPreviewIndex(result.previewIndex);
+    setForm((f) => ({
+      ...f,
+      image_urls: result.image_urls,
+    }));
   };
 
   return (
@@ -168,13 +189,12 @@ export default function RestaurantDishForm({
 
                   const newFiles = Array.from(e.target.files);
                   setImages((prev) => {
-                    const merged = [...prev, ...newFiles];
+                    const nextImages = [...prev, ...newFiles];
                     setForm((f) => ({
                       ...f,
-                      image_urls: merged.map((file) => file.name),
+                      image_urls: [...keptImageUrls, ...nextImages.map((file) => file.name)],
                     }));
-                    
-                    return merged;
+                    return nextImages;
                   });
                 }}
               />
@@ -284,22 +304,7 @@ export default function RestaurantDishForm({
                     height: 28,
                     zIndex: 30,
                   }}
-                  onClick={() => {
-                    setImages((prev) => {
-                      const next = prev.filter((_, i) => i !== previewIndex);
-
-                      setForm((f) => ({
-                        ...f,
-                        image_urls: next.length ? next.map((f) => f.name) : [],
-                      }));
-
-                      if (previewIndex >= next.length) {
-                        setPreviewIndex(Math.max(0, next.length - 1));
-                      }
-
-                      return next;
-                    });
-                  }}
+                  onClick={handleRemoveImage}
                 >
                   ✕
                 </Button>
