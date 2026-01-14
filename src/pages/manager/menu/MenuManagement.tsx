@@ -28,7 +28,7 @@ import {
   MenuItem,
 } from '../../../types';
 import { DAY_LABEL, DEFAULT_FOOD_IMG_URL, ENV, HTTP_PREFIX } from '../../../utils/constants';
-import { resolveFoodImageUrl } from '../../../utils/image';
+import { getImageUrls, resolveFoodImageUrl } from '../../../utils/image';
 import { getChangedFields, removeEmptyFields } from '../../../utils/updateFields';
 import { useRestaurant } from '../../../contexts/RestaurantContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
@@ -213,15 +213,16 @@ export default function MenuManagement() {
     const formData = new FormData();
     Object.entries(payload).forEach(([key, value]) => {
       if (Array.isArray(value)) {
-        value.forEach((v) => formData.append(`${key}[]`, v));
+        if (!value.length) {
+          formData.append(`${key}[]`, '');
+        } else {
+          value.forEach((v) => formData.append(`${key}[]`, v));
+        }
       } else {
-        formData.append(key, value as any);
+        formData.append(key, value);
       }
     });
-
-    images.forEach((file) => {
-      formData.append('menu-images', file);
-    });
+    images.forEach((file) => formData.append('menu-images', file));
 
     return formData;
   };
@@ -264,17 +265,27 @@ export default function MenuManagement() {
   const handleUpdateMenuItem = async (newDish: MenuItemForm, images: File[]) => {
     if (!currentRestaurant || !activeSchedule || !editingId || !editingDish) return;
 
-    const changedFields = removeEmptyFields(getChangedFields(editingDish, newDish));
+    const normalizedDish: MenuItemForm = {
+      ...newDish,
+      image_urls: getImageUrls(newDish.image_urls),
+    };
+    const nextImages = normalizedDish.image_urls ?? [];
+    const prevImages = editingDish.image_urls ?? [];
+    const isImageChanged =
+      prevImages.length !== nextImages.length || prevImages.some((url, i) => url !== nextImages[i]);
+    const changedFields = removeEmptyFields(getChangedFields(editingDish, normalizedDish));
+    if (isImageChanged) changedFields.image_urls = nextImages;
+
     if (!Object.keys(changedFields).length && !images.length) {
       toast('No changes detected');
 
       return;
     }
 
-    const formData = buildMenuItemFormData(changedFields, images);
     try {
       setLoading(true);
 
+      const formData = buildMenuItemFormData(changedFields, images);
       const res = await updateMenuItemApi(
         currentRestaurant.id,
         activeSchedule.id,
