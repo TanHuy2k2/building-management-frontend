@@ -10,6 +10,7 @@ import { Button } from '../../../components/ui/button';
 import { Edit } from 'lucide-react';
 import UpdateAssignedBusDialog from './UpdateAssignedBusDialog';
 import MapPicker from './MapPicker';
+import { formatVND } from '../../../utils/currency';
 
 const styles = {
   title: {
@@ -42,6 +43,20 @@ const styles = {
   inactiveDay: {
     backgroundColor: '#f1f5f9',
     color: '#94a3b8',
+  },
+  priceBox: {
+    padding: '10px 12px',
+    borderRadius: 6,
+    background: '#f9fafb',
+    border: '1px solid #e5e7eb',
+    fontWeight: 600,
+    textAlign: 'right',
+  } as React.CSSProperties,
+  sectionGrid: {
+    display: 'grid',
+    gridTemplateColumns: '2fr 1fr',
+    gap: 24,
+    marginTop: 16,
   },
 };
 
@@ -215,26 +230,37 @@ export default function BusRouteManagement() {
             </div>
 
             {/* Operating Days */}
-            <section>
-              <h3 style={styles.title}>📅 Operating days</h3>
-              <div style={styles.daysWrapper}>
-                {WEEK_DAYS.map((day) => {
-                  const active = selectedRoute.operating_dates
-                    ?.map((d) => d.toLowerCase())
-                    .includes(day.key);
+            <section style={styles.sectionGrid}>
+              <div>
+                <h3 style={styles.title}>📅 Operating days</h3>
+                <div style={styles.daysWrapper}>
+                  {WEEK_DAYS.map((day) => {
+                    const active = selectedRoute.operating_dates
+                      ?.map((d) => d.toLowerCase())
+                      .includes(day.key);
 
-                  return (
-                    <div
-                      key={day.key}
-                      style={{
-                        ...styles.day,
-                        ...(active ? styles.activeDay : styles.inactiveDay),
-                      }}
-                    >
-                      {day.label}
-                    </div>
-                  );
-                })}
+                    return (
+                      <div
+                        key={day.key}
+                        style={{
+                          ...styles.day,
+                          ...(active ? styles.activeDay : styles.inactiveDay),
+                        }}
+                      >
+                        {day.label}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <h3 style={styles.title}>💰 Base price</h3>
+                <div style={styles.priceBox}>
+                  {selectedRoute.base_price != null
+                    ? `${formatVND(selectedRoute.base_price)}`
+                    : '—'}
+                </div>
               </div>
             </section>
 

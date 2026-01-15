@@ -12,6 +12,7 @@ import {
 } from '../../services/parkingSubscriptionService';
 import { getUserById } from '../../services/userService';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../components/ui/dialog';
+import { formatVND } from '../../utils/currency';
 
 export default function ParkingManagement() {
   const [buildings, setBuildings] = useState<Building[]>([]);
@@ -319,6 +320,7 @@ export default function ParkingManagement() {
         <InfoRow label="Code" value={slot.code} />
         <InfoRow label="Area" value={slot.location.area} />
         <InfoRow label="Floor" value={String(slot.location.floor)} />
+        <InfoRow label="Price" value={`${formatVND(slot.base_price)}/month`} />
         <InfoRow label="Status" value={slot.status} />
       </div>
     );
