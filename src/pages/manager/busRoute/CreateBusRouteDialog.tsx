@@ -40,6 +40,7 @@ export default function CreateRouteDialog({
     description: '',
     departure_time: defaultDeparture,
     estimated_duration: 0,
+    base_price: 0,
     operating_dates: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -222,6 +223,24 @@ export default function CreateRouteDialog({
                   disabled={isSubmitting}
                 />
               </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium">
+                Price <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={form.base_price || ''}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    base_price: Number(e.target.value),
+                  }))
+                }
+                disabled={isSubmitting}
+              />
             </div>
 
             {/* Description */}

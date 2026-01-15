@@ -7,6 +7,7 @@ export interface BusRoute {
   description?: string;
   bus_id?: string[];
   departure_time: Date;
+  base_price: number;
   estimated_duration: number;
   status: ActiveStatus;
   operating_dates?: DayOfWeek[];
