@@ -10,6 +10,7 @@ export * from './bus';
 export * from './menu';
 export * from './busRoute';
 export * from './busSubscription';
+export * from './eventBooking';
 
 export interface MenuItem {
   id: string;
