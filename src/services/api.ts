@@ -107,7 +107,7 @@ export const API_ENDPOINTS = {
   BUS_SUBSCRIPTION: '/bus_subscriptions',
 
   // Events
-  EVENTS: '/events',
+  EVENTS: '/event_bookings',
   EVENT_BY_ID: (id: string) => `/events/${id}`,
   CREATE_EVENT: '/events',
   UPDATE_EVENT_STATUS: (id: string) => `/events/${id}/status`,
