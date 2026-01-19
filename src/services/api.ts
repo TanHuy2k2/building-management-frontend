@@ -110,7 +110,7 @@ export const API_ENDPOINTS = {
   EVENTS: '/event_bookings',
   EVENT_BY_ID: (id: string) => `/events/${id}`,
   CREATE_EVENT: '/events',
-  UPDATE_EVENT_STATUS: (id: string) => `/events/${id}/status`,
+  UPDATE_EVENT_STATUS: (id: string) => `/event_bookings/update-status/${id}`,
   EVENT_REGISTRATIONS: (id: string) => `/events/${id}/registrations`,
 
   // Notifications

@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Calendar, MapPin, Users, Clock, Search } from 'lucide-react';
 import { EventBookingStatus, EventBookingUI, GetEventParams, OrderDirection } from '../../types';
-import { getAllEventApi } from '../../services/eventService';
+import { getAllEventApi, updateEventStatusApi } from '../../services/eventService';
 import toast from 'react-hot-toast';
 import {
   DEFAULT_ORDER_BY,
@@ -142,8 +142,21 @@ export default function EventsManagement() {
     return <Badge variant={variants[status]}>{labels[status]}</Badge>;
   };
 
-  const updateStatus = (id: string, status: EventBookingStatus) => {
-    setEvents((prev) => prev.map((event) => (event.id === id ? { ...event, status } : event)));
+  const handleUpdateStatus = async (eventId: string, status: EventBookingStatus) => {
+    try {
+      const res = await updateEventStatusApi(eventId, status);
+      if (!res.success) {
+        toast.error(res.message);
+
+        return;
+      }
+
+      toast.success('Update status successfully');
+
+      setEvents((prev) => prev.map((e) => (e.id === eventId ? { ...e, status } : e)));
+    } catch (err: any) {
+      toast.error(err.message || 'Something went wrong');
+    }
   };
 
   return (
@@ -266,14 +279,14 @@ export default function EventsManagement() {
                 <div className="flex gap-2 pt-2">
                   <Button
                     size="sm"
-                    onClick={() => updateStatus(event.id, EventBookingStatus.APPROVED)}
+                    onClick={() => handleUpdateStatus(event.id, EventBookingStatus.APPROVED)}
                   >
                     Approve
                   </Button>
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={() => updateStatus(event.id, EventBookingStatus.REJECTED)}
+                    onClick={() => handleUpdateStatus(event.id, EventBookingStatus.REJECTED)}
                   >
                     Reject
                   </Button>
