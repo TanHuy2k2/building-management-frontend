@@ -1,3 +1,5 @@
+import { ActiveStatus } from './user';
+
 export enum DayOfWeek {
   MONDAY = 'monday',
   TUESDAY = 'tuesday',
@@ -56,6 +58,7 @@ export interface MenuItemForm {
   quantity: number;
   description?: string;
   image_urls?: string[];
+  status?: ActiveStatus;
 }
 
 export interface MenuItem extends MenuItemForm {

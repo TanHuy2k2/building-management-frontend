@@ -17,6 +17,7 @@ import ReportsPage from '../pages/manager/ReportsPage';
 import BusRouteManagement from '../pages/manager/busRoute/BusRouteManagement';
 import RestaurantManagement from '../pages/manager/restaurant/RestaurantManagement';
 import MenuManagement from '../pages/manager/menu/MenuManagement';
+import DishManagement from '../pages/manager/menu/DishManagement';
 
 // User Pages
 import UserHome from '../pages/user/Home';
@@ -54,6 +55,7 @@ export const router = createBrowserRouter([
       { path: 'reservations', Component: ReservationManagement },
       { path: 'restaurants', Component: RestaurantManagement },
       { path: 'menus', Component: MenuManagement },
+      { path: 'dishes', Component: DishManagement },
     ],
   },
   {

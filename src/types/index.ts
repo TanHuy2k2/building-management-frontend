@@ -11,6 +11,7 @@ export * from './menu';
 export * from './busRoute';
 export * from './busSubscription';
 export * from './eventBooking';
+export * from './dish';
 
 export interface MenuItem {
   id: string;

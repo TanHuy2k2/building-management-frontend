@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
 import { toast } from 'sonner';
-import { DishCategory, MenuItemForm } from '../../../types';
+import { ActiveStatus, DishCategory, MenuItemForm } from '../../../types';
 import { removeDishImageAtIndex, resolveFoodImageUrl } from '../../../utils/image';
 import { MAX_SHOWN_IMAGE_NAMES } from '../../../utils/constants';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
@@ -11,6 +11,7 @@ type Props = {
   open: boolean;
   loading?: boolean;
   mode?: 'create' | 'edit';
+  module?: 'dish' | 'menu';
   initialData?: Partial<MenuItemForm>;
   onClose: () => void;
   onSubmit: (dish: MenuItemForm, images: File[]) => Promise<void> | void;
@@ -23,12 +24,14 @@ const DEFAULT_FORM: MenuItemForm = {
   quantity: 1,
   description: '',
   image_urls: [],
+  status: ActiveStatus.ACTIVE,
 };
 
 export default function RestaurantDishForm({
   open,
   loading,
   mode = 'create',
+  module = 'menu',
   initialData,
   onClose,
   onSubmit,
@@ -75,7 +78,11 @@ export default function RestaurantDishForm({
       return;
     }
 
-    await onSubmit(form, images);
+    const submitForm =
+      module === 'dish'
+        ? (({ quantity, ...data }) => data)(form)
+        : (({ status, ...data }) => data)(form);
+    await onSubmit(submitForm as MenuItemForm, images);
   };
 
   const handleRemoveImage = () => {
@@ -127,17 +134,18 @@ export default function RestaurantDishForm({
               />
             </div>
 
-            {/* Quantity */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Quantity</label>
-              <input
-                type="number"
-                min={1}
-                value={form.quantity}
-                onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
-                className="w-full rounded-md border px-3 py-2 text-sm"
-              />
-            </div>
+            {module === 'menu' && (
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Quantity</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={form.quantity}
+                  onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
+                  className="w-full rounded-md border px-3 py-2 text-sm"
+                />
+              </div>
+            )}
 
             {/* Category */}
             <div className="space-y-1">
@@ -154,6 +162,20 @@ export default function RestaurantDishForm({
                 ))}
               </select>
             </div>
+
+            {module === 'dish' && (
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Status</label>
+                <select
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value as ActiveStatus })}
+                  className="w-full rounded-md border px-3 py-2 text-sm"
+                >
+                  <option value={ActiveStatus.ACTIVE}>Active</option>
+                  <option value={ActiveStatus.INACTIVE}>Inactive</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* MIDDLE */}

@@ -6,8 +6,9 @@ export const resolveFoodImageUrl = (url?: string) => {
   return url.startsWith(HTTP_PREFIX) ? url : `${ENV.BE_URL}/${url}`;
 };
 
+const VALID_IMAGE_PREFIXES = ['uploads/menu-images/', 'uploads/dish-images/'];
 export const getImageUrls = (imageUrls?: string[]) =>
-  imageUrls?.filter((url) => url.startsWith('uploads/menu-images/')) ?? [];
+  imageUrls?.filter((url) => VALID_IMAGE_PREFIXES.some((prefix) => url.startsWith(prefix))) ?? [];
 
 export function removeDishImageAtIndex(params: {
   previewIndex: number;
