@@ -77,6 +77,12 @@ export const API_ENDPOINTS = {
   MENU_SCHEDULES_ITEMS_BY_ID: (id: string, itemId: string) =>
     `/menu_schedules/${id}/items/${itemId}`,
 
+  // ===== DISH =====
+  DISHES: '/available_dishes',
+  DISH_CREATE: '/available_dishes/create',
+  DISH_BY_ID: (dishId: string) => `/available_dishes/${dishId}`,
+  UPDATE_DISH_BY_ID: (dishId: string) => `/available_dishes/update/${dishId}`,
+
   // Orders
   ORDERS: '/orders',
   ORDER_BY_ID: (id: string) => `/orders/${id}`,

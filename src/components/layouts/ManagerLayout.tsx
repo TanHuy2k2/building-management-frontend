@@ -21,6 +21,7 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardList,
+  Soup,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useState } from 'react';
@@ -79,6 +80,11 @@ export default function ManagerLayout() {
       label: 'Restaurants',
       key: 'restaurant',
       children: [
+        {
+          path: '/manager/dishes',
+          label: 'Dishes',
+          icon: Soup,
+        },
         {
           path: '/manager/menus',
           label: 'Menus',
