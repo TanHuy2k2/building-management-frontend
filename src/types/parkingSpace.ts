@@ -1,3 +1,5 @@
+import { OrderDirection } from './restaurant';
+
 export interface ParkingSpaceLocation {
   floor: number;
   area: string;
@@ -30,4 +32,6 @@ export interface ParkingSpace {
 
 export interface GetParkingParams {
   building_id: string;
+  order_by?: string;
+  order?: OrderDirection;
 }

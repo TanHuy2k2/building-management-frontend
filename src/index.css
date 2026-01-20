@@ -1219,8 +1219,16 @@
     background-color: var(--color-gray-200);
   }
 
+  .bg-gray-600 {
+    background-color: var(--color-gray-600);
+  }
+
   .bg-green-50 {
     background-color: var(--color-green-50);
+  }
+
+  .bg-green-600 {
+    background-color: var(--color-green-600);
   }
 
   .bg-indigo-50 {
