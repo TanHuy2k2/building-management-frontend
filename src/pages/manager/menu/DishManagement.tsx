@@ -33,6 +33,7 @@ import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { getChangedFields, removeEmptyFields } from '../../../utils/updateFields';
+import { formatSnakeCase } from '../../../utils/string';
 
 export default function DishManagement() {
   const { currentRestaurant, setCurrentRestaurant } = useRestaurant();
@@ -424,7 +425,7 @@ export default function DishManagement() {
 
                 <CardContent className="p-4 space-y-1">
                   <p className="font-semibold truncate">{dish.name}</p>
-                  <p className="text-sm text-muted-foreground">{dish.category as DishCategory}</p>
+                  <p className="text-sm text-muted-foreground">{formatSnakeCase(dish.category)}</p>
                   <p className="font-medium">{formatVND(dish.price)}</p>
                 </CardContent>
               </Card>

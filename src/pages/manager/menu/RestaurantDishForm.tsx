@@ -80,7 +80,9 @@ export default function RestaurantDishForm({
 
     const submitForm =
       module === 'dish'
-        ? (({ quantity, ...data }) => data)(form)
+        ? mode === 'create'
+          ? (({ quantity, status, ...data }) => data)(form)
+          : (({ quantity, ...data }) => data)(form)
         : (({ status, ...data }) => data)(form);
     await onSubmit(submitForm as MenuItemForm, images);
   };
@@ -128,6 +130,7 @@ export default function RestaurantDishForm({
               <input
                 type="number"
                 min={0}
+                step={10000}
                 value={form.price}
                 onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
                 className="w-full rounded-md border px-3 py-2 text-sm"
@@ -163,7 +166,7 @@ export default function RestaurantDishForm({
               </select>
             </div>
 
-            {module === 'dish' && (
+            {module === 'dish' && mode === 'edit' && (
               <div className="space-y-1">
                 <label className="text-sm font-medium">Status</label>
                 <select

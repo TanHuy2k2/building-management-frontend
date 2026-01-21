@@ -1,9 +1,10 @@
 import { useMemo, useState, useEffect } from 'react';
-import { MenuItemForm } from '../../../types';
+import { Dish, MenuItemForm } from '../../../types';
 import { Trash2 } from 'lucide-react';
+import { formatVND } from '../../../utils/currency';
 
 type Props = {
-  dishes: MenuItemForm[];
+  dishes: (Dish | MenuItemForm)[];
   disabledNames?: string[];
   placeholder?: string;
   value?: MenuItemForm[];
@@ -39,8 +40,17 @@ export default function RestaurantDishSelector({
     if (onSelect) onSelect(selectedItems);
   }, [selectedItems, onSelect]);
 
-  const handleSelectDish = (dish: MenuItemForm) => {
-    setSelectedItemsFn([...selectedItems, dish]);
+  const handleSelectDish = (dish: Dish | MenuItemForm) => {
+    const formDish: MenuItemForm = {
+      name: dish.name,
+      price: dish.price,
+      quantity: 1,
+      category: dish.category,
+      description: dish.description ?? '',
+      image_urls: dish.image_urls ?? [],
+    };
+
+    setSelectedItemsFn([...selectedItems, formDish]);
     setQuery('');
     setOpen(false);
   };
@@ -82,7 +92,6 @@ export default function RestaurantDishSelector({
         </div>
       )}
 
-      {/* Selected Items */}
       <div className="mt-2 flex flex-col gap-2 w-full">
         {selectedItems.map((item, idx) => (
           <div
@@ -91,16 +100,31 @@ export default function RestaurantDishSelector({
           >
             <div className="flex flex-col">
               <span className="font-semibold text-sm">{item.name}</span>
-              <span className="text-gray-500 text-xs">
-                ${item.price} · Qty {item.quantity}
-              </span>
+              <span className="text-gray-500 text-xs">{formatVND(item.price)}</span>
             </div>
-            <button
-              onClick={() => handleRemoveDish(idx)}
-              className="text-red-500 hover:text-red-700"
-            >
-              <Trash2 size={16} />
-            </button>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                value={item.quantity}
+                onChange={(e) => {
+                  const qty = Math.max(1, Number(e.target.value) || 1);
+                  setSelectedItemsFn(
+                    selectedItems.map((d, i) => (i === idx ? { ...d, quantity: qty } : d)),
+                  );
+                }}
+                style={{ width: 60 }}
+                className="w-16 rounded-md border px-2 py-1 text-sm text-right"
+              />
+
+              <button
+                onClick={() => handleRemoveDish(idx)}
+                className="text-red-500 hover:text-red-700"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
           </div>
         ))}
       </div>
