@@ -25,9 +25,9 @@ import {
   MenuItemForm,
   MenuForm,
   MenuScheduleForm,
-  MenuItem,
+  Dish,
 } from '../../../types';
-import { DAY_LABEL, DEFAULT_FOOD_IMG_URL, ENV, HTTP_PREFIX } from '../../../utils/constants';
+import { DAY_LABEL, DEFAULT_FOOD_IMG_URL } from '../../../utils/constants';
 import { getImageUrls, resolveFoodImageUrl } from '../../../utils/image';
 import { getChangedFields, removeEmptyFields } from '../../../utils/updateFields';
 import { useRestaurant } from '../../../contexts/RestaurantContext';
@@ -45,46 +45,13 @@ import RestaurantDishForm from './RestaurantDishForm';
 import RestaurantDishSelector from './RestaurantDishSelector';
 import RestaurantSelector from '../restaurant/RestaurantSelector';
 import { formatVND } from '../../../utils/currency';
-
-const mockDishes: MenuItemForm[] = [
-  {
-    name: 'New York Tenderloin Steak',
-    category: DishCategory.MAIN,
-    price: 15000,
-    quantity: 1,
-    description: 'Tender New York strip steak grilled to perfection, served with garlic butter.',
-    image_urls: ['steak.jpg', 'steak2.jpg'],
-  },
-  {
-    name: 'Garlic Mashed Potatoes',
-    category: DishCategory.SIDE,
-    price: 5000,
-    quantity: 1,
-    description: 'Creamy mashed potatoes with roasted garlic and butter.',
-    image_urls: ['potatoes.jpg', 'potatoes2.jpg'],
-  },
-  {
-    name: 'Caesar Salad',
-    category: DishCategory.SIDE,
-    price: 6000,
-    quantity: 1,
-    description: 'Fresh romaine lettuce with Caesar dressing, croutons, and parmesan.',
-    image_urls: ['dish.jpg', 'dish2.jpg'],
-  },
-  {
-    name: 'Chocolate Cake',
-    category: DishCategory.DESSERT,
-    price: 5000,
-    quantity: 1,
-    description: 'Rich and moist chocolate cake with chocolate ganache.',
-    image_urls: ['dish7.jpg', 'dish8.jpg'],
-  },
-];
+import { getRestaurantDishesApi } from '../../../services/restaurantDishService';
 
 export default function MenuManagement() {
   const scrollContainer = useRef<HTMLDivElement>(null);
   const { currentRestaurant, setCurrentRestaurant } = useRestaurant();
   const [menuSchedules, setMenuSchedules] = useState<MenuSchedule[]>([]);
+  const [dishList, setDishList] = useState<Dish[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingDish, setEditingDish] = useState<MenuItemForm | null>(null);
   const [selectedDishes, setSelectedDishes] = useState<MenuItemForm[]>([]);
@@ -107,13 +74,32 @@ export default function MenuManagement() {
   };
 
   const allDishes = [
-    ...mockDishes,
-    ...selectedItems.filter((s) => !mockDishes.some((d) => d.name === s.name)),
+    ...dishList,
+    ...selectedItems.filter((s) => !dishList.some((d) => d.name === s.name)),
   ];
 
   const isDayTaken = (day: DayOfWeek) =>
     menuForm.schedules.some((s) => s.id === day) || menuSchedules.some((s) => s.id === day);
   const allDaysCreated = Object.values(DayOfWeek).every(isDayTaken);
+
+  const loadDishes = async (restaurantId: string) => {
+    try {
+      setLoading(true);
+
+      const res = await getRestaurantDishesApi(restaurantId);
+      if (!res.success) {
+        toast.error(res.message);
+
+        return;
+      }
+
+      setDishList(res.data.dishes);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadMenuSchedules = async (restaurantId: string) => {
     try {
@@ -176,7 +162,8 @@ export default function MenuManagement() {
       return;
     }
 
-    if (!menuForm.schedules.length) {
+    const schedules = removeEmptyFields(menuForm.schedules);
+    if (!schedules.length) {
       toast.error('Please add at least one schedule before submitting');
 
       return;
@@ -184,7 +171,7 @@ export default function MenuManagement() {
 
     const formData = new FormData();
     selectedImages.forEach((file) => formData.append('menu-images', file));
-    formData.append('schedules', JSON.stringify(menuForm.schedules));
+    formData.append('schedules', JSON.stringify(schedules));
     try {
       setLoading(true);
 
@@ -312,6 +299,7 @@ export default function MenuManagement() {
 
   useEffect(() => {
     if (currentRestaurant?.id) {
+      loadDishes(currentRestaurant.id);
       loadMenuSchedules(currentRestaurant.id);
     }
   }, [currentRestaurant?.id]);
@@ -914,7 +902,7 @@ export default function MenuManagement() {
             </div>
 
             <RestaurantDishSelector
-              dishes={mockDishes}
+              dishes={dishList}
               disabledNames={activeSchedule.items.map((i) => i.name)}
               value={selectedDishes}
               onChange={(items) => setSelectedDishes(items)}

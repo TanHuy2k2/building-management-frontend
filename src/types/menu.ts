@@ -55,7 +55,7 @@ export interface MenuItemForm {
   name: string;
   category: DishCategory;
   price: number;
-  quantity: number;
+  quantity?: number;
   description?: string;
   image_urls?: string[];
   status?: ActiveStatus;
