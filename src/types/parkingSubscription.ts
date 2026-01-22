@@ -15,10 +15,18 @@ export interface ParkingSubscription {
   discount: number;
   points_used: number;
   total_amount: number;
-  point_earned: number;
+  points_earned: number;
   status: ParkingSubscriptionStatus;
   created_at?: Date;
   created_by?: string;
   updated_at?: Date;
   updated_by?: string;
+}
+
+export interface ParkingSubscriptionForm {
+  id?: string;
+  start_time?: Date;
+  month_duration: number;
+  base_amount: number;
+  points_used?: number;
 }

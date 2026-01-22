@@ -6,6 +6,7 @@ export * from './facility';
 export * from './restaurant';
 export * from './facilityReservation';
 export * from './parkingSpace';
+export * from './parkingSubscription';
 export * from './bus';
 export * from './menu';
 export * from './busRoute';
