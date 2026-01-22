@@ -57,6 +57,8 @@ export const API_ENDPOINTS = {
   PARKING_SUBSCRIPTION: (parkingId: string) => `/parking_spaces/${parkingId}/parking_subscriptions`,
   CURRENT_PARKING_SUBSCRIPTION: (parkingId: string) =>
     `/parking_spaces/${parkingId}/parking_subscriptions/current`,
+  CREATE_SUBSCRIPTION: (parkingId: string) =>
+    `/parking_spaces/${parkingId}/parking_subscriptions/create`,
 
   // Restaurants
   RESTAURANTS: '/restaurants',
