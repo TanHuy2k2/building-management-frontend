@@ -4,7 +4,7 @@ import { Button } from '../../../components/ui/button';
 import { toast } from 'sonner';
 import { ActiveStatus, DishCategory, MenuItemForm } from '../../../types';
 import { removeDishImageAtIndex, resolveFoodImageUrl } from '../../../utils/image';
-import { MAX_SHOWN_IMAGE_NAMES } from '../../../utils/constants';
+import { DEFAULT_FOOD_IMG_URL, MAX_SHOWN_IMAGE_NAMES } from '../../../utils/constants';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 type Props = {
@@ -259,6 +259,10 @@ export default function RestaurantDishForm({
                   <img
                     src={currentPreview}
                     alt="preview"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = DEFAULT_FOOD_IMG_URL;
+                    }}
                     style={{
                       width: '100%',
                       height: '100%',

@@ -87,9 +87,12 @@ export const API_ENDPOINTS = {
 
   // Orders
   ORDERS: '/orders',
+  ORDERS_LIST_BY_USER: '/orders/me',
+  ORDERS_HISTORY_BY_USER: '/orders/history',
+  ORDERS_CREATE: '/orders/create',
   ORDER_BY_ID: (id: string) => `/orders/${id}`,
-  CREATE_ORDER: '/orders',
-  UPDATE_ORDER_STATUS: (id: string) => `/orders/${id}/status`,
+  UPDATE_ORDER_BY_ID: (id: string) => `/orders/update/${id}`,
+  UPDATE_ORDER_STATUS: (id: string) => `/orders/update-status/${id}`,
 
   // Parking
   PARKING_SLOTS: '/parking/slots',
