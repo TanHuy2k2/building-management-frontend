@@ -143,6 +143,7 @@ export default function ReservationManagement() {
     pending: { label: 'Pending', color: '#16a34a', bg: '#dcfce7' },
     reserved: { label: 'Reserved', color: '#9a3412', bg: '#ffedd5' },
     cancelled: { label: 'Cancelled', color: '#991b1b', bg: '#fee2e2' },
+    expired: { label: 'Expired', color: '#6b7280', bg: '#f3f4f6' },
   } as const;
 
   const getStatusBadge = (status: FacilityReservationStatus) => (
