@@ -4,6 +4,7 @@ export enum FacilityReservationStatus {
   PENDING = 'pending',
   RESERVED = 'reserved',
   CANCELLED = 'cancelled',
+  EXPIRED = 'expired',
 }
 
 export interface FacilityReservation {
@@ -38,3 +39,12 @@ export interface GetReservationParams {
   order_by?: string;
   order?: OrderDirection;
 }
+
+export interface FacilityReservationForm {
+  facility_id: string;
+  start_date?: Date;
+  hour_duration: number;
+  points_used: number;
+}
+
+export type ViewMode = 'reserve' | 'history';
