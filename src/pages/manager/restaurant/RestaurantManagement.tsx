@@ -502,7 +502,7 @@ export default function RestaurantManagement() {
       {/* HEADER */}
       <div className="flex items-center justify-between flex-wrap gap-4 border-b pb-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Restaurant Management 🍽️</h1>
+          <h1 className="text-3xl font-bold">Restaurant Management 🍽️</h1>
           <p className="text-muted-foreground mt-1">List and manage restaurants</p>
         </div>
 

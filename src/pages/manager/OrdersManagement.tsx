@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { ArrowLeft, Clock, Package, CheckCircle, Truck, EyeOff, Eye } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, Truck, EyeOff, Eye, Loader2, ChefHat } from 'lucide-react';
 import {
   Order,
   OrderDetail,
@@ -19,11 +19,16 @@ import {
   DEFAULT_PAGE_TOTAL,
   POINT_VALUE,
 } from '../../utils/constants';
-import { getOrderByIdApi, getRestaurantOrdersApi } from '../../services/restaurantOrderService';
+import {
+  getOrderByIdApi,
+  getRestaurantOrdersApi,
+  updateOrderStatusApi,
+} from '../../services/restaurantOrderService';
 import RestaurantSelector from './restaurant/RestaurantSelector';
 import toast from 'react-hot-toast';
 import { useRestaurant } from '../../contexts/RestaurantContext';
 import { getUserById } from '../../services/userService';
+import { getPaginationNumbers } from '../../utils/pagination';
 
 export default function OrdersManagement() {
   const { currentRestaurant, setCurrentRestaurant } = useRestaurant();
@@ -31,6 +36,7 @@ export default function OrdersManagement() {
   const [orderUser, setOrderUser] = useState<User>();
   const [orderDetails, setOrderDetails] = useState<OrderDetail[]>([]);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [totalPage, setTotalPage] = useState(DEFAULT_PAGE_TOTAL);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -42,11 +48,40 @@ export default function OrdersManagement() {
     page_size: DEFAULT_PAGE_SIZE,
     order: OrderDirection.DESCENDING,
   });
-  const statusMap = {
-    [OrderStatus.PENDING]: { label: 'Pending', icon: Clock, variant: 'secondary' },
-    [OrderStatus.PREPARING]: { label: 'Preparing', icon: Package, variant: 'badge' },
-    [OrderStatus.DELIVERING]: { label: 'Delivering', icon: CheckCircle, variant: 'outline' },
-    [OrderStatus.COMPLETED]: { label: 'Completed', icon: Truck, variant: 'secondary' },
+  const isFiltering = !!params.status || !!params.pickup_method;
+  const statusMap: Record<
+    OrderStatus,
+    {
+      label: string;
+      icon: React.ElementType;
+      className: string;
+    }
+  > = {
+    [OrderStatus.PENDING]: {
+      label: 'Pending',
+      icon: Clock,
+      className: 'bg-yellow-100 text-yellow-700 border border-yellow-300 hover:bg-yellow-200',
+    },
+    [OrderStatus.PREPARING]: {
+      label: 'Preparing',
+      icon: ChefHat,
+      className: 'bg-blue-100 text-blue-700 border border-blue-300 hover:bg-blue-200',
+    },
+    [OrderStatus.DELIVERING]: {
+      label: 'Delivering',
+      icon: Truck,
+      className: 'bg-purple-100 text-purple-700 border border-purple-300 hover:bg-purple-200',
+    },
+    [OrderStatus.COMPLETED]: {
+      label: 'Completed',
+      icon: CheckCircle,
+      className: 'bg-green-100 text-green-700 border border-green-300 hover:bg-green-200',
+    },
+  };
+  const nextStatusMap: Partial<Record<OrderStatus, OrderStatus>> = {
+    [OrderStatus.PENDING]: OrderStatus.PREPARING,
+    [OrderStatus.PREPARING]: OrderStatus.DELIVERING,
+    [OrderStatus.DELIVERING]: OrderStatus.COMPLETED,
   };
 
   const getStatusBadge = (status: OrderStatus) => {
@@ -54,14 +89,13 @@ export default function OrdersManagement() {
     const Icon = cfg.icon;
 
     return (
-      <Badge variant={cfg.variant} className="h-9 px-3 flex items-center gap-1">
+      <Badge className={`h-9 px-3 flex items-center gap-1 ${cfg.className}`}>
         <Icon className="w-3 h-3" />
         {cfg.label}
       </Badge>
     );
   };
 
-  /* ===================== LOAD ORDERS ===================== */
   const loadOrders = async () => {
     if (!currentRestaurant) return;
 
@@ -70,6 +104,8 @@ export default function OrdersManagement() {
       const res = await getRestaurantOrdersApi(currentRestaurant.id, params);
       if (!res.success) {
         toast.error(res.message);
+        setOrders([]);
+        setTotalPage(DEFAULT_PAGE_TOTAL);
 
         return;
       }
@@ -104,7 +140,7 @@ export default function OrdersManagement() {
 
       if (!orderRes.success) {
         toast.error(orderRes.message);
-        
+
         return;
       }
 
@@ -118,6 +154,27 @@ export default function OrdersManagement() {
       setOrderUser(userRes.data);
     } finally {
       setLoadingDetails(false);
+    }
+  };
+
+  const handleNextStatus = async (order: Order) => {
+    const nextStatus = nextStatusMap[order.status];
+    if (!nextStatus || !currentRestaurant) return;
+
+    setUpdatingOrderId(order.id);
+    try {
+      const res = await updateOrderStatusApi(currentRestaurant.id, order.id, nextStatus);
+      if (!res.success) {
+        toast.error(res.message);
+
+        return;
+      }
+
+      toast.success(`Order moved to ${statusMap[nextStatus].label}`);
+
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: nextStatus } : o)));
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
@@ -210,6 +267,27 @@ export default function OrdersManagement() {
             }))
           }
         />
+
+        <Button
+          variant="outline"
+          style={{
+            background: 'transparent',
+            boxShadow: 'none',
+          }}
+          className="border rounded px-3 py-2 text-sm"
+          onClick={() =>
+            setParams((p) => ({
+              ...p,
+              page: DEFAULT_PAGE,
+              order:
+                p.order === OrderDirection.ASCENDING
+                  ? OrderDirection.DESCENDING
+                  : OrderDirection.ASCENDING,
+            }))
+          }
+        >
+          {params.order === OrderDirection.ASCENDING ? 'Oldest ▲' : 'Newest ▼'}
+        </Button>
       </div>
 
       {/* ===== ORDERS LIST ===== */}
@@ -218,11 +296,38 @@ export default function OrdersManagement() {
           <CardContent className="text-center py-10">Loading orders...</CardContent>
         </Card>
       ) : !orders.length ? (
-        <Card>
-          <CardContent className="text-center py-10 text-muted-foreground">
-            No orders found
-          </CardContent>
-        </Card>
+        <div className="flex flex-1 items-center justify-center py-24">
+          <Card className="w-full max-w-md">
+            <CardContent className="flex flex-col items-center gap-4 pt-4 pb-14">
+              {isFiltering ? (
+                <EyeOff className="h-10 w-10 text-muted-foreground" />
+              ) : (
+                <ChefHat className="h-10 w-10 text-muted-foreground" />
+              )}
+
+              <p className="text-base font-medium text-foreground text-center">
+                {isFiltering ? 'No orders match your filters' : 'No orders yet'}
+              </p>
+
+              {isFiltering && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setParams((p) => ({
+                      ...p,
+                      status: undefined,
+                      pickup_method: undefined,
+                      page: DEFAULT_PAGE,
+                    }))
+                  }
+                >
+                  Clear filters
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {orders.map((order) => {
@@ -241,6 +346,30 @@ export default function OrdersManagement() {
 
                     <div className="flex items-center gap-2">
                       {getStatusBadge(order.status)}
+
+                      {order.status !== OrderStatus.COMPLETED && nextStatusMap[order.status] && (
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-9 w-9"
+                          disabled={updatingOrderId === order.id}
+                          onClick={() => handleNextStatus(order)}
+                          title={`Edit status → ${statusMap[nextStatusMap[order.status]!].label}`}
+                        >
+                          {(() => {
+                            const nextStatus = nextStatusMap[order.status];
+                            if (!nextStatus) return null;
+
+                            const NextIcon = statusMap[nextStatus].icon;
+
+                            return updatingOrderId === order.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <NextIcon className="w-4 h-4" />
+                            );
+                          })()}
+                        </Button>
+                      )}
 
                       <Button
                         size="icon"
@@ -351,24 +480,68 @@ export default function OrdersManagement() {
         </div>
       )}
 
-      {/* ===== PAGINATION ===== */}
-      <div className="flex justify-center gap-2 mt-4">
+      {/* PAGINATION */}
+      <div className="flex justify-center mt-4 gap-2">
+        {/* Prev */}
         <Button
           variant="outline"
           disabled={params.page === 1}
-          onClick={() => setParams((p) => ({ ...p, page: (p.page ?? 1) - 1 }))}
+          onClick={() =>
+            setParams((p) => ({
+              ...p,
+              page: Math.max(1, (p.page ?? 1) - 1),
+            }))
+          }
         >
           Prev
         </Button>
 
-        <span className="px-4 py-2 text-sm">
-          Page {params.page} / {totalPage}
-        </span>
+        {/* Numbers */}
+        <div className="flex gap-2">
+          {getPaginationNumbers(params.page ?? 1, totalPage).map((item, idx) => {
+            if (item === '...') {
+              return (
+                <div key={idx} className="px-3 py-1 border rounded-lg text-gray-500">
+                  ...
+                </div>
+              );
+            }
 
+            return (
+              <button
+                key={idx}
+                onClick={() =>
+                  setParams((p) => ({
+                    ...p,
+                    page: Number(item),
+                  }))
+                }
+                style={{
+                  backgroundColor: params.page === item ? 'black' : 'white',
+                  color: params.page === item ? 'white' : 'black',
+                  padding: '0.25rem 0.75rem',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  transition: 'all 0.2s',
+                }}
+                className={params.page === item ? '' : 'hover:bg-gray-100'}
+              >
+                {item}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Next */}
         <Button
           variant="outline"
           disabled={params.page === totalPage}
-          onClick={() => setParams((p) => ({ ...p, page: (p.page ?? 1) + 1 }))}
+          onClick={() =>
+            setParams((p) => ({
+              ...p,
+              page: Math.min(totalPage, (p.page ?? 1) + 1),
+            }))
+          }
         >
           Next
         </Button>

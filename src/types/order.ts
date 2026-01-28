@@ -58,3 +58,30 @@ export interface GetOrdersParams {
   page?: number;
   page_size?: number;
 }
+
+export interface CreateOrderDetailDto {
+  name: string;
+  price: number;
+  quantity: number;
+  notes?: string;
+}
+
+export interface DeliveryAddress {
+  building?: string;
+  floor?: number;
+  room?: string;
+}
+
+export interface DeliveryInfo {
+  contact_name?: string;
+  contact_phone?: string;
+  notes?: string;
+}
+
+export interface CreateOrderDto {
+  pickup_method: PickupMethod;
+  points_used?: number;
+  delivery_address?: DeliveryAddress;
+  delivery_info?: DeliveryInfo;
+  order_details: CreateOrderDetailDto[];
+}

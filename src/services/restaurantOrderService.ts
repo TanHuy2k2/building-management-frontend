@@ -1,4 +1,4 @@
-import { GetOrdersParams, OrderStatus, ResponseInterface } from '../types';
+import { CreateOrderDto, GetOrdersParams, OrderStatus, ResponseInterface } from '../types';
 import { buildQuery } from '../utils/query';
 import { API_ENDPOINTS, apiRequest } from './api';
 import { getAccessToken } from './tokenService';
@@ -92,7 +92,7 @@ export async function getOrderByIdApi(
 /* ===================== CREATE ORDER ===================== */
 export async function createOrderApi(
   restaurantId: string,
-  data: Record<string, any>,
+  data: CreateOrderDto,
 ): Promise<ResponseInterface> {
   try {
     const token = await getAccessToken();
