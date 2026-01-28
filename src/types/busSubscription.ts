@@ -29,3 +29,14 @@ export interface GetBusSubscriptionParams {
   order_by?: string;
   order?: OrderDirection;
 }
+
+export interface BusSubscriptionForm {
+  id?: string;
+  route_id: string;
+  bus_id: string;
+  start_time?: Date;
+  month_duration: number;
+  base_amount: number;
+  points_used?: number;
+  seat_number: string;
+}

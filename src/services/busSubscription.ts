@@ -1,4 +1,4 @@
-import { GetBusSubscriptionParams, ResponseInterface } from '../types';
+import { BusSubscriptionForm, GetBusSubscriptionParams, ResponseInterface } from '../types';
 import { buildQuery } from '../utils/query';
 import { API_ENDPOINTS, apiRequest } from './api';
 import { getAccessToken } from './tokenService';
@@ -16,6 +16,26 @@ export async function getAllBusSubscriptionApi(
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
+
+export async function createBusSubscriptionApi(
+  data: BusSubscriptionForm,
+): Promise<ResponseInterface> {
+  try {
+    const accessToken = await getAccessToken();
+    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.BUS_SUBSCRIPTION, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 

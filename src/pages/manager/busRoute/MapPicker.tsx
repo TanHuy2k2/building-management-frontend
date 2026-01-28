@@ -22,6 +22,32 @@ function ClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }
   return null;
 }
 
+function FitBounds({ stops }: { stops: BusStop[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!stops || stops.length === 0) return;
+
+    const points = stops.map((s) => {
+      const [lat, lng] = s.location.split(',').map(Number);
+
+      return [lat, lng] as [number, number];
+    });
+
+    const bounds = L.latLngBounds(points);
+
+    setTimeout(() => {
+      map.invalidateSize();
+      map.fitBounds(bounds, {
+        padding: [60, 60],
+        maxZoom: 15,
+      });
+    }, 300);
+  }, [stops, map]);
+
+  return null;
+}
+
 function SearchControl({ onPick }: { onPick: (lat: number, lng: number, name: string) => void }) {
   const map = useMap();
 
@@ -97,12 +123,13 @@ export default function MapPicker({ value = [], onChange }: Props) {
       center={center}
       zoom={15}
       style={{
-        height: '30rem',
-        width: '50rem',
+        height: '100%',
+        width: '100%',
         borderRadius: '0.5rem',
       }}
     >
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <FitBounds stops={stops} />
       <SearchControl onPick={addStop} />
       <ClickHandler onPick={addStop} />
 
