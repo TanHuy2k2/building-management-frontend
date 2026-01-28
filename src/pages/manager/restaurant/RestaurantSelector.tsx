@@ -67,7 +67,7 @@ export default function RestaurantSelector({ onSelect }: RestaurantSelectorProps
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 4 }}>Select Restaurant</h1>
-        <p style={{ fontSize: 14, color: '#6b7280' }}>Choose a restaurant to manage...</p>
+        <p style={{ fontSize: 14, color: '#6b7280' }}>Choose a restaurant to...</p>
       </div>
 
       {loading ? (

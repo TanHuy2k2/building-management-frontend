@@ -8,10 +8,11 @@ import {
   ArrowRight as NextIcon,
   XCircle,
   CheckSquare,
+  Utensils,
+  EyeOff,
 } from 'lucide-react';
 import {
   Dish,
-  DishCategory,
   GetDishesParams,
   DishOrderBy,
   OrderDirection,
@@ -25,7 +26,12 @@ import {
   updateRestaurantDishApi,
 } from '../../../services/restaurantDishService';
 import { getImageUrls, resolveFoodImageUrl } from '../../../utils/image';
-import { DEFAULT_FOOD_IMG_URL, DEFAULT_PAGE, DEFAULT_PAGE_SIZE } from '../../../utils/constants';
+import {
+  DEFAULT_FOOD_IMG_URL,
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_SIZE,
+  DEFAULT_PAGE_TOTAL,
+} from '../../../utils/constants';
 import { formatVND } from '../../../utils/currency';
 import RestaurantSelector from '../restaurant/RestaurantSelector';
 import RestaurantDishForm from './RestaurantDishForm';
@@ -34,6 +40,7 @@ import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { getChangedFields, removeEmptyFields } from '../../../utils/updateFields';
 import { formatSnakeCase } from '../../../utils/string';
+import { getPaginationNumbers } from '../../../utils/pagination';
 
 export default function DishManagement() {
   const { currentRestaurant, setCurrentRestaurant } = useRestaurant();
@@ -61,6 +68,7 @@ export default function DishManagement() {
       color: 'bg-red-100 text-red-700 hover:bg-red-200',
     },
   };
+  const isFiltering = Boolean(params.status || params.category || params.name);
 
   const loadDishes = async (restaurantId: string, p: GetDishesParams) => {
     try {
@@ -69,6 +77,8 @@ export default function DishManagement() {
       const res = await getRestaurantDishesApi(restaurantId, p);
       if (!res.success) {
         toast.error(res.message);
+        setDishes([]);
+        setTotalPage(DEFAULT_PAGE_TOTAL);
 
         return;
       }
@@ -342,11 +352,39 @@ export default function DishManagement() {
           <CardContent className="text-center py-10">Loading dishes...</CardContent>
         </Card>
       ) : !dishes.length ? (
-        <Card>
-          <CardContent className="text-center py-10 text-muted-foreground">
-            No dishes available
-          </CardContent>
-        </Card>
+        <div className="flex flex-1 items-center justify-center py-24">
+          <Card className="w-full max-w-md">
+            <CardContent className="flex flex-col items-center gap-4 pt-4 pb-14">
+              {isFiltering ? (
+                <EyeOff className="h-10 w-10 text-muted-foreground" />
+              ) : (
+                <Utensils className="h-10 w-10 text-muted-foreground" />
+              )}
+
+              <p className="text-base font-medium text-foreground text-center">
+                {isFiltering ? 'No dishes match your filters' : 'No dishes yet'}
+              </p>
+
+              {isFiltering && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setParams((p) => ({
+                      ...p,
+                      status: undefined,
+                      category: undefined,
+                      name: undefined,
+                      page: DEFAULT_PAGE,
+                    }))
+                  }
+                >
+                  Clear filters
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {dishes.map((dish) => {
@@ -434,24 +472,68 @@ export default function DishManagement() {
         </div>
       )}
 
-      {/* ===== PAGINATION ===== */}
-      <div className="flex justify-center gap-2 mt-4">
+      {/* PAGINATION */}
+      <div className="flex justify-center mt-4 gap-2">
+        {/* Prev */}
         <Button
           variant="outline"
           disabled={params.page === 1}
-          onClick={() => setParams((p) => ({ ...p, page: (p.page ?? 1) - 1 }))}
+          onClick={() =>
+            setParams((p) => ({
+              ...p,
+              page: Math.max(1, (p.page ?? 1) - 1),
+            }))
+          }
         >
           Prev
         </Button>
 
-        <span className="px-4 py-2 text-sm">
-          Page {params.page} / {totalPage}
-        </span>
+        {/* Numbers */}
+        <div className="flex gap-2">
+          {getPaginationNumbers(params.page ?? 1, totalPage).map((item, idx) => {
+            if (item === '...') {
+              return (
+                <div key={idx} className="px-3 py-1 border rounded-lg text-gray-500">
+                  ...
+                </div>
+              );
+            }
 
+            return (
+              <button
+                key={idx}
+                onClick={() =>
+                  setParams((p) => ({
+                    ...p,
+                    page: Number(item),
+                  }))
+                }
+                style={{
+                  backgroundColor: params.page === item ? 'black' : 'white',
+                  color: params.page === item ? 'white' : 'black',
+                  padding: '0.25rem 0.75rem',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  transition: 'all 0.2s',
+                }}
+                className={params.page === item ? '' : 'hover:bg-gray-100'}
+              >
+                {item}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Next */}
         <Button
           variant="outline"
           disabled={params.page === totalPage}
-          onClick={() => setParams((p) => ({ ...p, page: (p.page ?? 1) + 1 }))}
+          onClick={() =>
+            setParams((p) => ({
+              ...p,
+              page: Math.min(totalPage, (p.page ?? 1) + 1),
+            }))
+          }
         >
           Next
         </Button>

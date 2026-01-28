@@ -123,3 +123,22 @@ export async function updateRestaurantStatusApi(
     throw new Error(error.message);
   }
 }
+
+export async function getRestaurantMenuApi(restaurantId: string): Promise<ResponseInterface> {
+  try {
+    const token = await getAccessToken();
+    const response: ResponseInterface = await apiRequest(
+      API_ENDPOINTS.RESTAURANT_MENU(restaurantId),
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    return response;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
