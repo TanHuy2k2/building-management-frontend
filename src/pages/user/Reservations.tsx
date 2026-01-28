@@ -17,6 +17,7 @@ import {
   FacilityReservationForm,
   FacilityReservationStatus,
   FacilityStatus,
+  FacilityType,
   GetFacilityParams,
   OrderDirection,
   ViewMode,
@@ -222,20 +223,22 @@ export default function UserReservations() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Points Used</Label>
-              <Input
-                type="number"
-                min={0}
-                value={form.points_used}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    points_used: Number(e.target.value),
-                  }))
-                }
-              />
-            </div>
+            {selectedFacility?.facility_type !== FacilityType.ROOM && (
+              <div className="space-y-2">
+                <Label>Points Used</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.points_used}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      points_used: Number(e.target.value),
+                    }))
+                  }
+                />
+              </div>
+            )}
 
             {/* Note */}
             <div
@@ -443,7 +446,7 @@ export default function UserReservations() {
 
                   {/* Price */}
                   {r.base_amount ? (
-                    <p className="text-sm font-semibold pt-1">{formatVND(r.base_amount)} VND</p>
+                    <p className="text-sm font-semibold pt-1">{formatVND(r.base_amount)}</p>
                   ) : (
                     ''
                   )}
