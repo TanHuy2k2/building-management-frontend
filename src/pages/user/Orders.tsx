@@ -16,6 +16,7 @@ import {
   Eye,
   ClipboardList,
   UtensilsCrossed,
+  Pencil,
 } from 'lucide-react';
 import {
   Dialog,
@@ -27,10 +28,12 @@ import {
 import {
   CreateOrderDto,
   MenuItem,
+  Order,
   OrderDetail,
   OrderStatus,
   PickupMethod,
   Restaurant,
+  UpdateOrderDto,
 } from '../../types';
 import { getRestaurantMenuApi } from '../../services/restaurantService';
 import toast from 'react-hot-toast';
@@ -39,12 +42,13 @@ import { formatSnakeCase } from '../../utils/string';
 import { formatVND } from '../../utils/currency';
 import { DEFAULT_FOOD_IMG_URL, POINT_VALUE } from '../../utils/constants';
 import { resolveFoodImageUrl } from '../../utils/image';
-import { removeEmptyFields } from '../../utils/updateFields';
+import { getChangedFields, removeEmptyFields } from '../../utils/updateFields';
 import {
   createOrderApi,
   getCurrentOrdersApi,
   getOrderByIdApi,
   getOrderHistoryApi,
+  updateOrderByIdApi,
 } from '../../services/restaurantOrderService';
 
 export default function UserOrders() {
@@ -62,10 +66,13 @@ export default function UserOrders() {
   const [orderNotes, setOrderNotes] = useState<Record<string, string>>({});
   const [orderHistoryTab, setOrderHistoryTab] = useState<'today' | 'history'>('today');
   const [orders, setOrders] = useState<any[]>([]);
+  const [orderDetails, setOrderDetails] = useState<OrderDetail[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
-  const [orderDetails, setOrderDetails] = useState<OrderDetail[]>([]);
+  const [orderDialogMode, setOrderDialogMode] = useState<'create' | 'update'>('create');
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [originalOrder, setOriginalOrder] = useState<Order | null>(null);
   const [deliveryAddress, setDeliveryAddress] = useState<{
     building?: string;
     floor?: number;
@@ -196,7 +203,6 @@ export default function UserOrders() {
   };
 
   const resetOrderState = () => {
-    setCart({});
     setPickupMethod(PickupMethod.DINE_IN);
     setPointsUsed(0);
     setOrderNotes({});
@@ -228,6 +234,12 @@ export default function UserOrders() {
       })),
   });
 
+  const buildUpdateOrderDto = (): UpdateOrderDto => ({
+    pickup_method: pickupMethod,
+    delivery_address: pickupMethod === PickupMethod.DELIVERY ? deliveryAddress : undefined,
+    delivery_info: pickupMethod === PickupMethod.DELIVERY ? deliveryInfo : undefined,
+  });
+
   const handleCreateOrder = async () => {
     const payload = removeEmptyFields(buildCreateOrderDto());
     if (!payload.order_details.length) {
@@ -245,6 +257,7 @@ export default function UserOrders() {
 
     toast.success('Order created successfully');
     resetOrderState();
+    setCart({});
     setShowCreateOrder(false);
   };
 
@@ -273,6 +286,40 @@ export default function UserOrders() {
       setOrderDetails(res.data.order_details);
     } finally {
       setLoadingDetails(false);
+    }
+  };
+
+  const handleUpdateOrder = async () => {
+    if (!currentRestaurant || !editingOrder || !originalOrder) return;
+
+    try {
+      setLoading(true);
+      const payload = removeEmptyFields(
+        getChangedFields(
+          {
+            pickup_method: originalOrder.pickup_method,
+            delivery_address: originalOrder.delivery_address,
+            delivery_info: originalOrder.delivery_info,
+          },
+          buildUpdateOrderDto(),
+        ),
+      );
+      const res = await updateOrderByIdApi(currentRestaurant.id, editingOrder.id, payload);
+      if (!res.success) {
+        toast.error(res.message);
+
+        return;
+      }
+
+      toast.success('Order updated successfully');
+      loadTodayOrders();
+
+      setShowCreateOrder(false);
+      setEditingOrder(null);
+      setOrderDialogMode('create');
+      resetOrderState();
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -319,6 +366,19 @@ export default function UserOrders() {
 
                   <div className="flex items-center gap-2">
                     {getStatusBadge(order.status)}
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      disabled={order.status !== OrderStatus.PENDING}
+                      onClick={() => {
+                        setEditingOrder(order);
+                        setOriginalOrder(order);
+                        setOrderDialogMode('update');
+                        setShowCreateOrder(true);
+                      }}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
 
                     <Button
                       size="icon"
@@ -443,6 +503,18 @@ export default function UserOrders() {
     }
   }, [showOrderHistory, orderHistoryTab, currentRestaurant?.id]);
 
+  useEffect(() => {
+    if (orderDialogMode !== 'update' || !editingOrder) return;
+
+    setPickupMethod(editingOrder.pickup_method);
+    setDeliveryAddress(editingOrder.delivery_address || {});
+    setDeliveryInfo({
+      contact_name: editingOrder.delivery_info?.contact_name || '',
+      contact_phone: editingOrder.delivery_info?.contact_phone || '',
+      notes: editingOrder.delivery_info?.notes || '',
+    });
+  }, [orderDialogMode, editingOrder]);
+
   if (!currentRestaurant) {
     return <RestaurantSelector onSelect={setCurrentRestaurant} />;
   }
@@ -494,7 +566,7 @@ export default function UserOrders() {
         <>
           <Tabs
             value={orderHistoryTab}
-            onValueChange={(v) => setOrderHistoryTab(v as 'today' | 'history')}
+            onValueChange={(v: string) => setOrderHistoryTab(v as 'today' | 'history')}
             className="space-y-4"
           >
             <TabsList>
@@ -634,6 +706,9 @@ export default function UserOrders() {
                   className="w-full"
                   onClick={() => {
                     setShowCart(false);
+                    setOrderDialogMode('create');
+                    setEditingOrder(null);
+                    resetOrderState();
                     setShowCreateOrder(true);
                   }}
                 >
@@ -649,21 +724,41 @@ export default function UserOrders() {
       <Dialog open={showCreateOrder} onOpenChange={setShowCreateOrder}>
         <DialogContent
           style={{
-            width: '90vw',
-            maxWidth: '1200px',
+            ...(orderDialogMode === 'update'
+              ? { width: '600px', maxWidth: '95vw' }
+              : { width: '90vw', maxWidth: '1200px' }),
             height: '85vh',
             display: 'flex',
             flexDirection: 'column',
           }}
         >
-          <DialogHeader>
-            <DialogTitle>Confirm order</DialogTitle>
-            <DialogDescription>Choose pickup method and enter order information</DialogDescription>
-          </DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {orderDialogMode === 'create' ? (
+              'Confirm order'
+            ) : (
+              <>
+                Update order
+                {editingOrder?.id && (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    #{editingOrder.id}
+                  </span>
+                )}
+              </>
+            )}
+          </DialogTitle>
+
+          <DialogDescription>
+            {orderDialogMode === 'create'
+              ? 'Choose pickup method and enter order information'
+              : 'Update pickup and delivery information'}
+          </DialogDescription>
 
           {/* BODY */}
-          <div className="flex-1 grid grid-cols-2 gap-4 overflow-hidden">
-            {/* LEFT – Order info */}
+          <div
+            className={`flex-1 grid gap-4 overflow-hidden ${
+              orderDialogMode === 'update' ? 'grid-cols-1' : 'grid-cols-2'
+            }`}
+          >
             <div className="space-y-4 overflow-y-auto pr-2">
               {/* Pickup method */}
               <div className="space-y-2">
@@ -679,21 +774,25 @@ export default function UserOrders() {
                 </select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Use Membership Points</label>
+              {orderDialogMode === 'create' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Use Membership Points</label>
 
-                <input
-                  type="number"
-                  min={0}
-                  value={pointsUsed}
-                  onChange={(e) => setPointsUsed(Number(e.target.value) || 0)}
-                  className="w-full border rounded-md px-3 py-2"
-                />
+                  <input
+                    type="number"
+                    min={0}
+                    value={pointsUsed}
+                    onChange={(e) => setPointsUsed(Number(e.target.value) || 0)}
+                    className="w-full border rounded-md px-3 py-2"
+                  />
 
-                {pointsUsed > 0 && (
-                  <p className="text-xs text-muted-foreground">− {formatVND(pointsUsed * 1000)}</p>
-                )}
-              </div>
+                  {pointsUsed > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      − {formatVND(pointsUsed * 1000)}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Delivery fields */}
               {pickupMethod === PickupMethod.DELIVERY && (
@@ -775,39 +874,56 @@ export default function UserOrders() {
               )}
             </div>
 
-            {/* RIGHT – Order items */}
-            <div className="border rounded-md p-3 overflow-y-auto space-y-3 bg-muted/30">
-              <p className="font-medium">Order Details</p>
+            {orderDialogMode === 'create' && (
+              <div className="border rounded-md p-3 overflow-y-auto space-y-3 bg-muted/30">
+                <p className="font-medium">Order Details</p>
 
-              {cartItems.map(({ item, quantity }) =>
-                item ? (
-                  <div key={item.id} className="space-y-2 rounded-md bg-background p-3">
-                    <div className="flex justify-between">
-                      <span className="font-medium">
-                        {item.name} × {quantity}
-                      </span>
-                      <span>{formatVND(item.price * quantity)}</span>
+                {cartItems.map(({ item, quantity }) =>
+                  item ? (
+                    <div key={item.id} className="space-y-2 rounded-md bg-background p-3">
+                      <div className="flex justify-between">
+                        <span className="font-medium">
+                          {item.name} × {quantity}
+                        </span>
+                        <span>{formatVND(item.price * quantity)}</span>
+                      </div>
+
+                      <textarea
+                        placeholder="Notes for this item (optional)"
+                        className="w-full border rounded-md px-3 py-2 text-sm"
+                        value={orderNotes[item.id] || ''}
+                        onChange={(e) =>
+                          setOrderNotes((p) => ({ ...p, [item.id]: e.target.value }))
+                        }
+                      />
                     </div>
-
-                    <textarea
-                      placeholder="Notes for this item (optional)"
-                      className="w-full border rounded-md px-3 py-2 text-sm"
-                      value={orderNotes[item.id] || ''}
-                      onChange={(e) => setOrderNotes((p) => ({ ...p, [item.id]: e.target.value }))}
-                    />
-                  </div>
-                ) : null,
-              )}
-            </div>
+                  ) : null,
+                )}
+              </div>
+            )}
           </div>
 
           {/* FOOTER */}
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => setShowCreateOrder(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCreateOrder(false);
+                if (orderDialogMode === 'create') {
+                  resetOrderState();
+                }
+                setEditingOrder(null);
+                setOrderDialogMode('create');
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={handleCreateOrder} disabled={loading}>
-              Confirm order
+
+            <Button
+              onClick={orderDialogMode === 'create' ? handleCreateOrder : handleUpdateOrder}
+              disabled={loading}
+            >
+              {orderDialogMode === 'create' ? 'Confirm order' : 'Update order'}
             </Button>
           </div>
         </DialogContent>

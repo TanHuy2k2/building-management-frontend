@@ -34,16 +34,8 @@ export interface Order {
   total_amount: number;
   points_earned: number;
   pickup_method: PickupMethod;
-  delivery_address?: {
-    building?: string;
-    floor?: number;
-    room?: string;
-  };
-  delivery_info?: {
-    contact_name?: string;
-    contact_phone?: string;
-    notes?: string;
-  };
+  delivery_address?: DeliveryAddress;
+  delivery_info?: DeliveryInfo;
   status: OrderStatus;
   payment_id?: string;
   created_at: Date;
@@ -84,4 +76,10 @@ export interface CreateOrderDto {
   delivery_address?: DeliveryAddress;
   delivery_info?: DeliveryInfo;
   order_details: CreateOrderDetailDto[];
+}
+
+export interface UpdateOrderDto {
+  pickup_method?: PickupMethod;
+  delivery_address?: DeliveryAddress;
+  delivery_info?: DeliveryInfo;
 }
