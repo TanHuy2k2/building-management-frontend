@@ -3,9 +3,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { mockMenuItems } from '../../data/mockData';
-import { Plus, Minus, ShoppingCart } from 'lucide-react';
-import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
+import {
+  Plus,
+  Minus,
+  ShoppingCart,
+  ArrowLeft,
+  Clock,
+  ChefHat,
+  Truck,
+  CheckCircle,
+  EyeOff,
+  Eye,
+  ClipboardList,
+  UtensilsCrossed,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,16 +24,28 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog';
-import { CreateOrderDto, MenuItem, PickupMethod, Restaurant } from '../../types';
+import {
+  CreateOrderDto,
+  MenuItem,
+  OrderDetail,
+  OrderStatus,
+  PickupMethod,
+  Restaurant,
+} from '../../types';
 import { getRestaurantMenuApi } from '../../services/restaurantService';
 import toast from 'react-hot-toast';
 import RestaurantSelector from '../manager/restaurant/RestaurantSelector';
 import { formatSnakeCase } from '../../utils/string';
 import { formatVND } from '../../utils/currency';
-import { DEFAULT_FOOD_IMG_URL } from '../../utils/constants';
+import { DEFAULT_FOOD_IMG_URL, POINT_VALUE } from '../../utils/constants';
 import { resolveFoodImageUrl } from '../../utils/image';
 import { removeEmptyFields } from '../../utils/updateFields';
-import { createOrderApi } from '../../services/restaurantOrderService';
+import {
+  createOrderApi,
+  getCurrentOrdersApi,
+  getOrderByIdApi,
+  getOrderHistoryApi,
+} from '../../services/restaurantOrderService';
 
 export default function UserOrders() {
   const [cart, setCart] = useState<{ [key: string]: number }>({});
@@ -33,9 +56,16 @@ export default function UserOrders() {
   const [activeCategory, setActiveCategory] = useState<string | undefined>();
   const [erroredImages, setErroredImages] = useState<Record<string, boolean>>({});
   const [showCreateOrder, setShowCreateOrder] = useState(false);
+  const [showOrderHistory, setShowOrderHistory] = useState(false);
   const [pickupMethod, setPickupMethod] = useState<PickupMethod>(PickupMethod.DINE_IN);
   const [pointsUsed, setPointsUsed] = useState<number>(0);
   const [orderNotes, setOrderNotes] = useState<Record<string, string>>({});
+  const [orderHistoryTab, setOrderHistoryTab] = useState<'today' | 'history'>('today');
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [orderDetails, setOrderDetails] = useState<OrderDetail[]>([]);
   const [deliveryAddress, setDeliveryAddress] = useState<{
     building?: string;
     floor?: number;
@@ -58,6 +88,35 @@ export default function UserOrders() {
     0,
   );
   const cartCount = Object.values(cart).reduce((sum, count) => sum + count, 0);
+  const statusMap: Record<
+    OrderStatus,
+    {
+      label: string;
+      icon: React.ElementType;
+      className: string;
+    }
+  > = {
+    [OrderStatus.PENDING]: {
+      label: 'Pending',
+      icon: Clock,
+      className: 'bg-yellow-100 text-yellow-700 border border-yellow-300 hover:bg-yellow-200',
+    },
+    [OrderStatus.PREPARING]: {
+      label: 'Preparing',
+      icon: ChefHat,
+      className: 'bg-blue-100 text-blue-700 border border-blue-300 hover:bg-blue-200',
+    },
+    [OrderStatus.DELIVERING]: {
+      label: 'Delivering',
+      icon: Truck,
+      className: 'bg-purple-100 text-purple-700 border border-purple-300 hover:bg-purple-200',
+    },
+    [OrderStatus.COMPLETED]: {
+      label: 'Completed',
+      icon: CheckCircle,
+      className: 'bg-green-100 text-green-700 border border-green-300 hover:bg-green-200',
+    },
+  };
 
   const loadMenu = async (restaurantId: string) => {
     try {
@@ -74,6 +133,44 @@ export default function UserOrders() {
       setMenuItems(res.data);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTodayOrders = async () => {
+    if (!currentRestaurant) return;
+
+    try {
+      setLoadingOrders(true);
+      const res = await getCurrentOrdersApi(currentRestaurant.id);
+      if (!res.success) {
+        toast.error(res.message);
+        setOrders([]);
+
+        return;
+      }
+
+      setOrders(res.data);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  const loadOrderHistory = async () => {
+    if (!currentRestaurant) return;
+
+    try {
+      setLoadingOrders(true);
+      const res = await getOrderHistoryApi(currentRestaurant.id);
+      if (!res.success) {
+        toast.error(res.message);
+        setOrders([]);
+
+        return;
+      }
+
+      setOrders(res.data);
+    } finally {
+      setLoadingOrders(false);
     }
   };
 
@@ -111,6 +208,11 @@ export default function UserOrders() {
     });
   };
 
+  const handleBack = () => {
+    resetOrderState();
+    setCurrentRestaurant(null);
+  };
+
   const buildCreateOrderDto = (): CreateOrderDto => ({
     pickup_method: pickupMethod,
     points_used: pointsUsed || undefined,
@@ -146,6 +248,179 @@ export default function UserOrders() {
     setShowCreateOrder(false);
   };
 
+  const handleViewDetails = async (orderId: string, userId: string) => {
+    if (expandedOrderId === orderId) {
+      setExpandedOrderId(null);
+      setOrderDetails([]);
+
+      return;
+    }
+
+    if (!currentRestaurant) return;
+
+    setExpandedOrderId(orderId);
+    setLoadingDetails(true);
+    setOrderDetails([]);
+
+    try {
+      const res = await getOrderByIdApi(currentRestaurant!.id, orderId);
+      if (!res.success) {
+        toast.error(res.message);
+
+        return;
+      }
+
+      setOrderDetails(res.data.order_details);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  const getStatusBadge = (status: OrderStatus) => {
+    const cfg = statusMap[status];
+    const Icon = cfg.icon;
+
+    return (
+      <Badge className={`h-9 px-3 flex items-center gap-1 ${cfg.className}`}>
+        <Icon className="w-3 h-3" />
+        {cfg.label}
+      </Badge>
+    );
+  };
+
+  const renderOrders = () => {
+    if (loadingOrders) {
+      return <p className="text-muted-foreground text-center py-6">Loading orders...</p>;
+    }
+
+    if (!orders.length) {
+      return (
+        <p className="text-muted-foreground text-center py-6">
+          {orderHistoryTab === 'today' ? 'No orders today' : 'No order history'}
+        </p>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {orders.map((order) => {
+          const discountAmount = (order.discount || 0) + (order.points_used || 0) * POINT_VALUE;
+
+          return (
+            <Card key={order.id}>
+              <CardHeader className="pb-1">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-base">Order #{order.id}</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(order.created_at).toLocaleString('vi-VN')}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(order.status)}
+
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => handleViewDetails(order.id, order.user_id)}
+                    >
+                      {expandedOrderId === order.id ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-2">
+                {expandedOrderId === order.id && (
+                  <>
+                    {loadingDetails ? (
+                      <p className="text-sm text-muted-foreground">Loading order details...</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {/* ===== ORDER DETAILS ===== */}
+                        {orderDetails.map((item) => (
+                          <div key={item.id} className="flex justify-between text-sm">
+                            <span>
+                              {item.quantity}x {item.name}
+                            </span>
+                            <span>{(item.price * item.quantity).toLocaleString()} VNĐ</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* ===== PAYMENT SUMMARY ===== */}
+                <div className="border-t pt-3 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>{order.base_amount.toLocaleString()} VNĐ</span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">VAT</span>
+                    <span>{order.vat_charge.toLocaleString()} VNĐ</span>
+                  </div>
+
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount</span>
+                      <span>-{discountAmount.toLocaleString()} VNĐ</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between font-semibold text-base">
+                    <span>Total</span>
+                    <span>{order.total_amount.toLocaleString()} VNĐ</span>
+                  </div>
+                </div>
+
+                {/* ===== PICKUP / DELIVERY INFO ===== */}
+                <div className="border-t pt-3 text-sm space-y-1">
+                  <p>
+                    <span className="text-muted-foreground">Method:</span>{' '}
+                    <span className="font-medium capitalize">
+                      {order.pickup_method.replace('_', ' ')}
+                    </span>
+                  </p>
+
+                  {order.pickup_method === PickupMethod.DELIVERY && order.delivery_address && (
+                    <p>
+                      <span className="text-muted-foreground">Address:</span>{' '}
+                      {[
+                        order.delivery_address.building,
+                        order.delivery_address.floor && `Floor ${order.delivery_address.floor}`,
+                        order.delivery_address.room && `Room ${order.delivery_address.room}`,
+                      ]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </p>
+                  )}
+
+                  {order.pickup_method === PickupMethod.DELIVERY &&
+                    order.delivery_info?.contact_name && (
+                      <p>
+                        <span className="text-muted-foreground">Receiver:</span>{' '}
+                        {order.delivery_info.contact_name}
+                        {order.delivery_info.contact_phone &&
+                          ` • ${order.delivery_info.contact_phone}`}
+                      </p>
+                    )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    );
+  };
+
   useEffect(() => {
     if (!currentRestaurant?.id) return;
 
@@ -158,6 +433,16 @@ export default function UserOrders() {
     }
   }, [categories, activeCategory]);
 
+  useEffect(() => {
+    if (!showOrderHistory) return;
+
+    if (orderHistoryTab === 'today') {
+      loadTodayOrders();
+    } else {
+      loadOrderHistory();
+    }
+  }, [showOrderHistory, orderHistoryTab, currentRestaurant?.id]);
+
   if (!currentRestaurant) {
     return <RestaurantSelector onSelect={setCurrentRestaurant} />;
   }
@@ -165,22 +450,62 @@ export default function UserOrders() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Food Order</h1>
-          <p className="text-muted-foreground">Pick your favorite food for the day</p>
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => handleBack()}>
+            <ArrowLeft className="size-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-semibold">Food Order</h1>
+            <p className="text-muted-foreground">Pick your favorite food for the day</p>
+          </div>
         </div>
-        <Button onClick={() => setShowCart(true)} className="relative">
-          <ShoppingCart className="size-4 mr-2" />
-          Cart
-          {cartCount > 0 && (
-            <Badge className="absolute -top-2 -right-2 size-6 p-0 flex items-center justify-center">
-              {cartCount}
-            </Badge>
-          )}
-        </Button>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => setShowOrderHistory((prev) => !prev)}
+          >
+            {showOrderHistory ? (
+              <>
+                <UtensilsCrossed className="size-4" />
+                Order Food
+              </>
+            ) : (
+              <>
+                <ClipboardList className="size-4" />
+                Your Orders
+              </>
+            )}
+          </Button>
+          <Button onClick={() => setShowCart(true)} className="relative">
+            <ShoppingCart className="size-4 mr-2" />
+            Cart
+            {cartCount > 0 && (
+              <Badge className="absolute -top-2 -right-2 size-6 p-0 flex items-center justify-center">
+                {cartCount}
+              </Badge>
+            )}
+          </Button>
+        </div>
       </div>
 
-      {loading ? (
+      {showOrderHistory ? (
+        <>
+          <Tabs
+            value={orderHistoryTab}
+            onValueChange={(v) => setOrderHistoryTab(v as 'today' | 'history')}
+            className="space-y-4"
+          >
+            <TabsList>
+              <TabsTrigger value="today">Today</TabsTrigger>
+              <TabsTrigger value="history">History</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {renderOrders()}
+        </>
+      ) : loading ? (
         <div className="py-20 text-center text-muted-foreground">Loading menu...</div>
       ) : (
         <Tabs value={activeCategory} onValueChange={setActiveCategory} className="space-y-4">
@@ -251,6 +576,7 @@ export default function UserOrders() {
           ))}
         </Tabs>
       )}
+
       {/* Cart Dialog */}
       <Dialog open={showCart} onOpenChange={setShowCart}>
         <DialogContent>
@@ -319,6 +645,7 @@ export default function UserOrders() {
         </DialogContent>
       </Dialog>
 
+      {/* Order Confirm Dialog */}
       <Dialog open={showCreateOrder} onOpenChange={setShowCreateOrder}>
         <DialogContent
           style={{
