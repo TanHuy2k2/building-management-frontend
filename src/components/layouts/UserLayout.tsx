@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getRankDetails } from '../../utils/rank';
+import { resolveImageUrl } from '../../utils/image';
+import { DEFAULT_AVATAR_URL } from '../../utils/constants';
 
 export default function UserLayout() {
   const location = useLocation();
@@ -40,20 +42,40 @@ export default function UserLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
-      {/* Header */}
       <header className="bg-white border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="font-semibold">Welcome, {currentUser?.full_name}</h1>
-            {rankDetails && (
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline" className={rankDetails.bgColor}>
-                  <span className={rankDetails.color}>{rankDetails.name}</span>
-                </Badge>
-                <span className="text-sm text-muted-foreground">{currentUser?.points} points</span>
-              </div>
-            )}
+          <div className="flex items-center gap-4">
+            {/* Avatar */}
+            <div
+              className="rounded-full overflow-hidden bg-gray-200 flex items-center justify-center"
+              style={{ width: 56, height: 56 }}
+            >
+              <img
+                src={resolveImageUrl(currentUser?.image_url, 'avatar')}
+                alt="Avatar"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = DEFAULT_AVATAR_URL;
+                }}
+              />
+            </div>
+
+            {/* User info */}
+            <div>
+              <h1 className="font-semibold">Welcome, {currentUser?.full_name}</h1>
+              {rankDetails && (
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline" className={rankDetails.bgColor}>
+                    <span className={rankDetails.color}>{rankDetails.name}</span>
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    {currentUser?.points} points
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
+
           <Button variant="ghost" size="icon" onClick={handleLogout}>
             <LogOut className="size-5" />
           </Button>

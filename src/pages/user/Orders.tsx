@@ -41,7 +41,7 @@ import RestaurantSelector from '../manager/restaurant/RestaurantSelector';
 import { formatSnakeCase } from '../../utils/string';
 import { formatVND } from '../../utils/currency';
 import { DEFAULT_FOOD_IMG_URL, POINT_VALUE } from '../../utils/constants';
-import { resolveFoodImageUrl } from '../../utils/image';
+import { resolveImageUrl } from '../../utils/image';
 import { getChangedFields, removeEmptyFields } from '../../utils/updateFields';
 import {
   createOrderApi,
@@ -601,7 +601,7 @@ export default function UserOrders() {
                           src={
                             erroredImages[`${item.id}-0`]
                               ? DEFAULT_FOOD_IMG_URL
-                              : resolveFoodImageUrl(item.image_urls?.[0])
+                              : resolveImageUrl(item.image_urls?.[0], 'food')
                           }
                           alt={item.name}
                           className="w-full h-64 object-cover rounded-t-lg"
@@ -672,7 +672,7 @@ export default function UserOrders() {
                         src={
                           erroredImages[`${item.id}-0`]
                             ? DEFAULT_FOOD_IMG_URL
-                            : resolveFoodImageUrl(item.image_urls?.[0])
+                            : resolveImageUrl(item.image_urls?.[0], 'food')
                         }
                         alt={item.name}
                         className="size-10 aspect-square rounded-full object-cover shrink-0 block bg-muted"

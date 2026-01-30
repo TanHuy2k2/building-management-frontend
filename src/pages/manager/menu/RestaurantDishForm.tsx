@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../compo
 import { Button } from '../../../components/ui/button';
 import { toast } from 'sonner';
 import { ActiveStatus, DishCategory, MenuItemForm } from '../../../types';
-import { removeDishImageAtIndex, resolveFoodImageUrl } from '../../../utils/image';
+import { removeDishImageAtIndex, resolveImageUrl } from '../../../utils/image';
 import { DEFAULT_FOOD_IMG_URL, MAX_SHOWN_IMAGE_NAMES } from '../../../utils/constants';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
@@ -43,7 +43,7 @@ export default function RestaurantDishForm({
 
   const initialImageUrls = (initialData?.image_urls ?? []) as string[];
   const previewImages = [
-    ...keptImageUrls.map(resolveFoodImageUrl),
+    ...keptImageUrls.map((url) => resolveImageUrl(url, 'food')),
     ...images.map((file) => URL.createObjectURL(file)),
   ];
   const currentPreview = previewImages[previewIndex];
