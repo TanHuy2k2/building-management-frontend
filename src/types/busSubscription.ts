@@ -23,6 +23,7 @@ export interface BusSubscription {
 }
 
 export interface GetBusSubscriptionParams {
+  user_id?: string;
   route_id?: string;
   page?: number;
   page_size?: number;
