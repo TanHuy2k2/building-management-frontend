@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { MapPin, Clock, Info, LucideTableRowsSplit, DivideCircleIcon } from 'lucide-react';
+import { MapPin, Clock, Info, CheckCircle, Bus as BusIcon, Calendar, Armchair } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,15 +19,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { Bus, BusRoute, BusSeat, BusSeatStatus, BusSubscriptionForm } from '../../types';
+import {
+  Bus,
+  BusRoute,
+  BusSeat,
+  BusSeatStatus,
+  BusSubscription,
+  BusSubscriptionForm,
+} from '../../types';
 import { getAllBusRouteApi } from '../../services/busRouteService';
 import toast from 'react-hot-toast';
 import { formatVND } from '../../utils/currency';
 import { getBusByIdApi } from '../../services/busService';
 import RouteMap from '../manager/busRoute/BusRouteMap';
-import { createBusSubscriptionApi } from '../../services/busSubscription';
+import { createBusSubscriptionApi, getAllBusSubscriptionApi } from '../../services/busSubscription';
+import { useAuth } from '../../contexts/AuthContext';
+import { formatTimeVN } from '../../utils/time';
 
 export default function UserBus() {
+  const { currentUser } = useAuth();
   const [open, setOpen] = useState(false);
   const [routes, setRoutes] = useState<BusRoute[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(routes[0]);
@@ -41,16 +51,22 @@ export default function UserBus() {
   const [form, setForm] = useState<BusSubscriptionForm>({
     route_id: '',
     bus_id: '',
-    start_time: undefined,
+    start_time: new Date(),
     month_duration: 1,
     base_amount: 0,
     seat_number: '',
     points_used: 0,
   });
+  const [mySubscriptions, setMySubscriptions] = useState<BusSubscription[]>([]);
+  const [viewMode, setViewMode] = useState<'routes' | 'myReservations'>('myReservations');
+  const [myBusesMap, setMyBusesMap] = useState<Record<string, Bus>>({});
 
   useEffect(() => {
+    if (!currentUser?.id) return;
+
     fetchRoutes();
-  }, []);
+    fetchMySubscriptions();
+  }, [currentUser?.id]);
 
   useEffect(() => {
     if (selectedRoute) {
@@ -412,6 +428,37 @@ export default function UserBus() {
     }
   };
 
+  const fetchMySubscriptions = async () => {
+    try {
+      const res = await getAllBusSubscriptionApi({ user_id: currentUser!.id });
+      if (!res.success) {
+        toast.error(res.message);
+
+        return;
+      }
+
+      const subs = res.data.busSubscription;
+      setMySubscriptions(subs);
+
+      const uniqueBusIds: string[] = [
+        ...new Set(subs.map((s: BusSubscription) => s.bus_id)),
+      ] as string[];
+      const results = await Promise.all(uniqueBusIds.map((id: string) => getBusByIdApi(id)));
+      const busMap: Record<string, Bus> = {};
+      results.forEach((r) => {
+        if (r.success) busMap[r.data.id] = r.data;
+      });
+
+      setMyBusesMap(busMap);
+    } catch (err: any) {
+      toast.error('Cannot get my Bus Subscription: ', err);
+    }
+  };
+
+  const isReservedRoute = (routeId: string) => {
+    return mySubscriptions.some((sub) => String(sub.route_id) === String(routeId));
+  };
+
   return (
     <div className="space-y-6">
       {/* Dialog booking */}
@@ -466,7 +513,7 @@ export default function UserBus() {
               <div className="space-y-2">
                 <Label>Bus</Label>
                 <Select
-                  value={selectedBusId}
+                  value={selectedBusId || ''}
                   onValueChange={(value: string) => {
                     setSelectedBusId(value);
                     setSelectedSeat(null);
@@ -504,7 +551,7 @@ export default function UserBus() {
                 <Label>Start time</Label>
                 <Input
                   type="date"
-                  value={form.start_time ? form.start_time.toISOString().slice(0, 10) : ''}
+                  value={form.start_time?.toISOString().slice(0, 10)}
                   onChange={(e) =>
                     setForm((prev) => ({
                       ...prev,
@@ -521,7 +568,7 @@ export default function UserBus() {
                   type="number"
                   min={1}
                   placeholder="e.g. 1, 3, 6"
-                  value={form.month_duration}
+                  value={form.month_duration || ''}
                   onChange={(e) =>
                     setForm((prev) => ({
                       ...prev,
@@ -688,113 +735,214 @@ export default function UserBus() {
         <Button
           onClick={() => {
             setSelectedSeat(null);
-            setOpen(true);
+            setViewMode(viewMode === 'routes' ? 'myReservations' : 'routes');
           }}
         >
-          History
+          {viewMode === 'routes' ? 'My Reservations' : 'Select Bus Routes'}
         </Button>
       </div>
 
       {/* Routes */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Routes</h2>
-        {loading ? (
-          <p>Loading routes...</p>
-        ) : (
-          routes.map((route) => {
-            const startStop = route.stops?.[0];
-            const endStop = route.stops?.[route.stops.length - 1];
+      {viewMode === 'routes' && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Routes</h2>
+          {loading ? (
+            <p>Loading routes...</p>
+          ) : (
+            routes.map((route) => {
+              const startStop = route.stops?.[0];
+              const endStop = route.stops?.[route.stops.length - 1];
 
-            return (
-              <Card key={route.id} className="relative">
-                {/* Info */}
-                <button
-                  onClick={async () => {
-                    setSelectedRoute(route);
-                    setOpenDetail(true);
+              return (
+                <Card key={route.id} className="relative">
+                  {/* Info */}
+                  <button
+                    onClick={async () => {
+                      setSelectedRoute(route);
+                      setOpenDetail(true);
 
-                    if (!route.bus_id?.length) return;
+                      if (!route.bus_id?.length) return;
 
-                    const results = await Promise.all(route.bus_id.map((id) => getBusByIdApi(id)));
-                    const busList = results.filter((r) => r.success).map((r) => r.data);
-                    setDetailBuses(busList);
+                      const results = await Promise.all(
+                        route.bus_id.map((id) => getBusByIdApi(id)),
+                      );
+                      const busList = results.filter((r) => r.success).map((r) => r.data);
+                      setDetailBuses(busList);
 
-                    if (busList.length) setDetailBusId(busList[0].id);
-                  }}
-                  style={{
-                    position: 'absolute',
-                    top: 12,
-                    right: 12,
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 4,
-                  }}
-                  title="View detail"
-                >
-                  <Info size={20} color="#6b7280" />
-                </button>
+                      if (busList.length) setDetailBusId(busList[0].id);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: 12,
+                      right: 12,
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 4,
+                    }}
+                    title="View detail"
+                  >
+                    <Info size={20} color="#6b7280" />
+                  </button>
 
-                <CardHeader>
-                  <CardTitle className="text-base">{route.route_name}</CardTitle>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <div className="flex items-start gap-2">
-                        <MapPin className="size-4 text-green-600 mt-1 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium">Start Point</p>
-                          <p className="text-sm text-muted-foreground">{startStop?.stop_name}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <MapPin className="size-4 text-red-600 mt-1 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium">End Point</p>
-                          <p className="text-sm text-muted-foreground">{endStop?.stop_name}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Clock className="size-4 text-muted-foreground" />
-                        <span className="text-sm">{route.estimated_duration} minutes</span>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-lg">{formatVND(route.base_price)}/month</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-medium mb-2">Stops:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {route.stops?.map((stop) => (
-                        <Badge key={stop.stop_id} variant="outline">
-                          {stop.order}. {stop.stop_name}
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      {route.route_name}
+                      {isReservedRoute(route.id) && (
+                        <Badge className="bg-green-100 text-green-700 border-green-300">
+                          <CheckCircle size={14} />
+                          You
                         </Badge>
-                      ))}
-                    </div>
-                  </div>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <Button
-                      onClick={() => {
-                        setOpen(true);
-                        handleBookNow(route);
-                      }}
-                    >
-                      Book Now
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
-      </div>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-2">
+                          <MapPin className="size-4 text-green-600 mt-1 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium">Start Point</p>
+                            <p className="text-sm text-muted-foreground">{startStop?.stop_name}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <MapPin className="size-4 text-red-600 mt-1 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium">End Point</p>
+                            <p className="text-sm text-muted-foreground">{endStop?.stop_name}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Clock className="size-4 text-muted-foreground" />
+                          <span className="text-sm">{route.estimated_duration} minutes</span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-lg">
+                            {formatVND(route.base_price)}/month
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium mb-2">Stops:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {route.stops?.map((stop) => (
+                          <Badge key={stop.stop_id} variant="outline">
+                            {stop.order}. {stop.stop_name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <Button
+                        disabled={isReservedRoute(route.id)}
+                        onClick={() => {
+                          setOpen(true);
+                          handleBookNow(route);
+                        }}
+                        className={
+                          isReservedRoute(route.id)
+                            ? 'bg-green-600 hover:bg-green-600 text-white cursor-default'
+                            : ''
+                        }
+                      >
+                        {isReservedRoute(route.id) ? 'Reserved' : 'Book Now'}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {viewMode === 'myReservations' && (
+        <div className="space-y-4">
+          {!mySubscriptions.length ? (
+            <p className="text-muted-foreground">You have no reservations.</p>
+          ) : (
+            mySubscriptions.map((sub) => {
+              const route = routes.find((r) => String(r.id) === String(sub.route_id));
+              const bus = myBusesMap[sub.bus_id];
+
+              if (!route || !bus) return null;
+
+              return (
+                <Card
+                  key={sub.id}
+                  className="border rounded-xl shadow-sm hover:shadow-md transition bg-white"
+                >
+                  <CardContent className="p-4 space-y-3">
+                    {/* Header */}
+                    <div className="flex justify-between items-center">
+                      <div className="space-y-1">
+                        <h3 className="font-semibold text-base">{route.route_name}</h3>
+
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <BusIcon size={14} />
+                          <span>{bus.plate_number}</span>
+                        </div>
+                      </div>
+
+                      <Badge className="bg-green-100 text-green-700">Active</Badge>
+                    </div>
+
+                    {/* Info */}
+                    <div className="border-t pt-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      {/* Seat */}
+                      <div className="flex items-center gap-2">
+                        <Armchair size={14} className="text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Seat</p>
+                          <p className="font-medium">{sub.seat_number}</p>
+                        </div>
+                      </div>
+
+                      {/* Departure */}
+                      <div className="flex items-center gap-2">
+                        <Clock size={14} className="text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Departure</p>
+                          <p className="font-medium">{formatTimeVN(route.departure_time)}</p>
+                        </div>
+                      </div>
+
+                      {/* Start */}
+                      <div className="flex items-center gap-2">
+                        <Calendar size={14} className="text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Start Date</p>
+                          <p className="font-medium">
+                            {new Date(sub.start_time).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* End */}
+                      <div className="flex items-center gap-2">
+                        <Calendar size={14} className="text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">End Date</p>
+                          <p className="font-medium">
+                            {new Date(sub.end_time).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </div>
+      )}
 
       {/* Info */}
       <Card>
