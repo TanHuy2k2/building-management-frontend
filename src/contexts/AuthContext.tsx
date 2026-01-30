@@ -7,23 +7,32 @@ import { getAccessToken } from '../services/tokenService';
 
 interface AuthContextType {
   currentUser: User | null;
-  login: () => Promise<string[] | void>;
+  login: () => Promise<void>;
   logout: () => void;
+  refreshCurrentUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const login = async () => {
+  const fetchCurrentUser = async () => {
     try {
-      const response: ResponseInterface = await getUserProfile();
-      if (response.success) {
-        setCurrentUser(response.data);
+      const res: ResponseInterface = await getUserProfile();
+      if (res.success) {
+        setCurrentUser(res.data);
       }
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('Fetch current user failed:', error);
     }
+  };
+
+  const login = async () => {
+    await fetchCurrentUser();
+  };
+
+  const refreshCurrentUser = async () => {
+    await fetchCurrentUser();
   };
 
   const logout = async () => {
@@ -65,7 +74,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ currentUser, login, logout, refreshCurrentUser }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 

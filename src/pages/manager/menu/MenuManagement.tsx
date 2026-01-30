@@ -28,7 +28,7 @@ import {
   Dish,
 } from '../../../types';
 import { DAY_LABEL, DEFAULT_FOOD_IMG_URL } from '../../../utils/constants';
-import { getImageUrls, resolveFoodImageUrl } from '../../../utils/image';
+import { getImageUrls, resolveImageUrl } from '../../../utils/image';
 import { getChangedFields, removeEmptyFields } from '../../../utils/updateFields';
 import { useRestaurant } from '../../../contexts/RestaurantContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
@@ -765,7 +765,7 @@ export default function MenuManagement() {
                             src={
                               erroredImages[`${item.id}-${currentImage}`]
                                 ? DEFAULT_FOOD_IMG_URL
-                                : resolveFoodImageUrl(currentImage)
+                                : resolveImageUrl(currentImage)
                             }
                             alt={item.name}
                             style={{
