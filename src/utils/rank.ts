@@ -7,6 +7,7 @@ export const getRankDetails = (rank?: string) => {
       pointValue: 1000,
       minSpent: 0,
       maxSpent: 2000000,
+      discount: 0,
     },
     silver: {
       name: 'silver',
@@ -15,6 +16,7 @@ export const getRankDetails = (rank?: string) => {
       pointValue: 1200,
       minSpent: 2000000,
       maxSpent: 5000000,
+      discount: 2,
     },
     gold: {
       name: 'gold',
@@ -23,6 +25,7 @@ export const getRankDetails = (rank?: string) => {
       pointValue: 1400,
       minSpent: 5000000,
       maxSpent: 10000000,
+      discount: 5,
     },
     platinum: {
       name: 'platinum',
@@ -31,6 +34,7 @@ export const getRankDetails = (rank?: string) => {
       pointValue: 1500,
       minSpent: 10000000,
       maxSpent: Infinity,
+      discount: 10,
     },
   };
   return ranks[rank as keyof typeof ranks] || ranks.bronze;

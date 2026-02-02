@@ -1,7 +1,14 @@
-import { DEFAULT_FOOD_IMG_URL, ENV, HTTP_PREFIX } from './constants';
+import { DEFAULT_AVATAR_URL, DEFAULT_FOOD_IMG_URL, ENV, HTTP_PREFIX } from './constants';
 
-export const resolveFoodImageUrl = (url?: string) => {
-  if (!url) return DEFAULT_FOOD_IMG_URL;
+type ImageType = 'avatar' | 'food';
+
+const DEFAULT_IMAGE_MAP: Record<ImageType, string> = {
+  avatar: DEFAULT_AVATAR_URL,
+  food: DEFAULT_FOOD_IMG_URL,
+};
+
+export const resolveImageUrl = (url?: string | null, type: ImageType = 'avatar') => {
+  if (!url) return DEFAULT_IMAGE_MAP[type];
 
   return url.startsWith(HTTP_PREFIX) ? url : `${ENV.BE_URL}/${url}`;
 };

@@ -25,7 +25,7 @@ import {
   createRestaurantDishApi,
   updateRestaurantDishApi,
 } from '../../../services/restaurantDishService';
-import { getImageUrls, resolveFoodImageUrl } from '../../../utils/image';
+import { getImageUrls, resolveImageUrl } from '../../../utils/image';
 import {
   DEFAULT_FOOD_IMG_URL,
   DEFAULT_PAGE,
@@ -395,7 +395,7 @@ export default function DishManagement() {
               <Card key={dish.id} className="relative overflow-hidden">
                 <div className="relative aspect-[4/3] bg-gray-100" style={{ height: 220 }}>
                   <img
-                    src={resolveFoodImageUrl(images[index])}
+                    src={resolveImageUrl(images[index], 'food')}
                     className="w-full h-full object-cover"
                   />
 
