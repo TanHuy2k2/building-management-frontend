@@ -1,17 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../components/ui/dialog';
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { useAuth } from '../../contexts/AuthContext';
 import { getRankDetails } from '../../utils/rank';
-import { mockTransactions } from '../../data/mockData';
 import { Crown, Award, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -20,10 +12,15 @@ import { updatePassword, updateUserProfile } from '../../services/userService';
 import { User as UserInterface } from '../../types';
 import { Label } from '../../components/ui/label';
 import { Input } from '../../components/ui/input';
-import { ENV, POINT_VALUE } from '../../utils/constants';
+import { DEFAULT_AVATAR_URL, POINT_VALUE } from '../../utils/constants';
+import { resolveImageUrl } from '../../utils/image';
+import { formatSnakeCase } from '../../utils/string';
+import { formatVND } from '../../utils/currency';
+import { useNavigate } from 'react-router';
 
 export default function UserProfile() {
-  const { currentUser } = useAuth();
+  const navigate = useNavigate();
+  const { currentUser, fetchCurrentUser, logout } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -33,6 +30,8 @@ export default function UserProfile() {
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [passwordEditOpen, setPasswordEditOpen] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isCapsLockOn, setIsCapsLockOn] = useState(false);
+  const [passwordMismatch, setPasswordMismatch] = useState(false);
 
   useEffect(() => {
     if (currentUser) setUser({ ...currentUser });
@@ -41,7 +40,6 @@ export default function UserProfile() {
   if (!currentUser || !user) return null;
 
   const rankDetails = getRankDetails(currentUser.rank);
-  const userTransactions = mockTransactions.filter((t) => t.userId === currentUser.id);
   const ranks = [
     { name: 'bronze', min: 0 },
     { name: 'silver', min: 1000000 },
@@ -54,13 +52,26 @@ export default function UserProfile() {
   const userSpentBasedOnRank = currentRank.min;
   const amountNeededForNextRank = nextRank ? nextRank.min - userSpentBasedOnRank : 0;
 
+  const handleKeyEvent = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    setIsCapsLockOn(e.getModifierState('CapsLock'));
+  };
+
+  const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setConfirmPassword(value);
+    setPasswordMismatch(newPassword !== value);
+  };
+
   const handleUpdatePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast.error('Please fill all fields');
+
       return;
     }
+
     if (newPassword !== confirmPassword) {
       toast.error('New password and confirm password do not match');
+      
       return;
     }
 
@@ -78,10 +89,8 @@ export default function UserProfile() {
       });
       if (res.success) {
         toast.success('Password updated successfully');
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-        setPasswordEditOpen(false);
+        logout();
+        navigate('/');
       } else {
         toast.error(res.message || 'Failed to update password');
       }
@@ -128,13 +137,13 @@ export default function UserProfile() {
     setLoading(true);
     try {
       const res = await updateUserProfile(formData);
-
       if (res.success) {
         toast.success('Profile updated successfully');
         if (selectedFile) {
           setSelectedFile(null);
         }
 
+        await fetchCurrentUser();
         setProfileEditOpen(false);
       } else {
         toast.error(res.message || 'Failed to update profile');
@@ -148,36 +157,30 @@ export default function UserProfile() {
     }
   };
 
-  const getAvatarSrc = () => {
-    if (avatarPreview) return avatarPreview;
-
-    if (user?.image_url) return `${ENV.BE_URL}/${user.image_url}`;
-
-    return '';
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold">Account</h1>
-        <p className="text-muted-foreground">Profile Details</p>
+        <h1 className="text-2xl font-semibold">Account Center</h1>
+        <p className="text-muted-foreground">Manage Profile Details</p>
       </div>
 
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-start gap-6">
-            {/* LEFT: USER INFO */}
             <div className="flex items-center gap-6 flex-1">
               <div
                 style={{ width: 100, height: 100 }}
                 className="rounded-full overflow-hidden bg-gray-200 items-center justify-center"
               >
                 <img
-                  src={getAvatarSrc()}
+                  src={avatarPreview ?? resolveImageUrl(user.image_url, 'avatar')}
                   alt="Avatar"
                   className="w-full h-full object-center object-cover"
                   style={{ aspectRatio: '1 / 1' }}
+                  onError={(e) => {
+                    e.currentTarget.src = DEFAULT_AVATAR_URL;
+                  }}
                 />
               </div>
 
@@ -193,135 +196,18 @@ export default function UserProfile() {
                 </Badge>
               </div>
             </div>
-            {/* RIGHT BUTTONS */}
             <div className="flex flex-col gap-3 shrink-0 self-start">
-              {/* Update Profile */}
-              <Dialog
-                open={profileEditOpen}
-                onOpenChange={(open: boolean) => {
-                  setProfileEditOpen(open);
-                  if (!open) {
-                    setUser({ ...currentUser });
-                    setAvatarPreview(null);
-                    setSelectedFile(null);
-                  }
-                }}
+              <Button className="w-[180px]" onClick={() => setProfileEditOpen(true)}>
+                Update Profile
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-[180px]"
+                onClick={() => setPasswordEditOpen(true)}
               >
-                <DialogTrigger asChild>
-                  <Button className="w-[180px] min-w-[180px] shrink-0">Update Profile</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Update Profile</DialogTitle>
-                  </DialogHeader>
-
-                  <div className="space-y-4">
-                    <div className="flex-1 min-w-0 space-y-4 text-sm md:text-base">
-                      {/* Full Name */}
-                      <div>
-                        <Label>Full Name</Label>
-                        <Input
-                          value={user.full_name}
-                          onChange={(e) => setUser({ ...user, full_name: e.target.value })}
-                        />
-                      </div>
-
-                      {/* Email */}
-                      <div>
-                        <Label>Email</Label>
-                        <Input value={user.email} disabled className="bg-gray-100" />
-                      </div>
-
-                      {/* Username */}
-                      <div>
-                        <Label>Username</Label>
-                        <Input
-                          value={user.username}
-                          onChange={(e) => setUser({ ...user, username: e.target.value })}
-                        />
-                      </div>
-
-                      {/* Phone */}
-                      <div>
-                        <Label>Phone</Label>
-                        <Input
-                          value={user.phone}
-                          onChange={(e) => setUser({ ...user, phone: e.target.value })}
-                        />
-                      </div>
-
-                      {/* Avatar */}
-                      <div>
-                        <Label>Avatar</Label>
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            if (e.target.files && e.target.files[0]) {
-                              const file = e.target.files[0];
-                              setSelectedFile(file);
-                              setAvatarPreview(URL.createObjectURL(file));
-                            }
-                          }}
-                        />
-                      </div>
-
-                      <Button
-                        className="w-full mt-2"
-                        onClick={handleUpdateProfile}
-                        disabled={loading}
-                      >
-                        {loading ? 'Saving...' : 'Save'}
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-
-              {/* Update Password */}
-              <Dialog open={passwordEditOpen} onOpenChange={setPasswordEditOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="w-[180px] min-w-[180px] shrink-0">
-                    Update Password
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Change Password</DialogTitle>
-                  </DialogHeader>
-
-                  <div className="space-y-3">
-                    <input
-                      className="w-full border p-2 rounded"
-                      type="password"
-                      placeholder="Current Password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                    />
-                    <input
-                      className="w-full border p-2 rounded"
-                      type="password"
-                      placeholder="New Password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                    />
-                    <input
-                      className="w-full border p-2 rounded"
-                      type="password"
-                      placeholder="Confirm New Password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                    />
-                    <Button
-                      className="w-full mt-2"
-                      onClick={handleUpdatePassword}
-                      disabled={loading}
-                    >
-                      {loading ? 'Updating...' : 'Update Password'}
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                Update Password
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -350,7 +236,6 @@ export default function UserProfile() {
             <TrendingUp className="size-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">{userTransactions.length}</div>
             <p className="text-xs text-muted-foreground mt-1">Total</p>
           </CardContent>
         </Card>
@@ -368,16 +253,12 @@ export default function UserProfile() {
               <strong>{getRankDetails(nextRank.name).name}</strong> by reaching:
             </p>
 
-            <p className="text-xl font-semibold">
-              {nextRank.min.toLocaleString()} VND total spending
-            </p>
+            <p className="text-xl font-semibold">{formatVND(nextRank.min)} total spending</p>
 
             <p className="text-muted-foreground text-sm">
               You need{' '}
-              <strong className="text-blue-600">
-                {amountNeededForNextRank.toLocaleString()} VND
-              </strong>{' '}
-              more to reach {getRankDetails(nextRank.name).name}.
+              <strong className="text-blue-600">{formatVND(amountNeededForNextRank)}</strong> more
+              to reach {getRankDetails(nextRank.name).name}.
             </p>
           </CardContent>
         </Card>
@@ -386,15 +267,15 @@ export default function UserProfile() {
       {/* Rank Benefits */}
       <Card>
         <CardHeader>
-          <CardTitle>{rankDetails.name} Rank Benefits</CardTitle>
+          <CardTitle>{formatSnakeCase(rankDetails.name)} Rank Benefits</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-start gap-3">
             <div className="size-2 rounded-full bg-blue-600 mt-2" />
             <div>
-              <p className="font-medium">Higher Point Value</p>
+              <p className="font-medium">Rank Discount</p>
               <p className="text-sm text-muted-foreground">
-                1 point = {POINT_VALUE.toLocaleString()} VND
+                Enjoy <strong>{rankDetails.discount}%</strong> discount on eligible services
               </p>
             </div>
           </div>
@@ -410,8 +291,16 @@ export default function UserProfile() {
           <div className="flex items-start gap-3">
             <div className="size-2 rounded-full bg-blue-600 mt-2" />
             <div>
-              <p className="font-medium">Faster Point Accumulation</p>
-              <p className="text-sm text-muted-foreground">Every 20,000 VND earns 1 point</p>
+              <p className="font-medium">Point Value</p>
+              <p className="text-sm text-muted-foreground">1 point = {formatVND(POINT_VALUE)}</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="size-2 rounded-full bg-blue-600 mt-2" />
+            <div>
+              <p className="font-medium">Point Accumulation</p>
+              <p className="text-sm text-muted-foreground">Every 20.000 VND earns 1 point</p>
             </div>
           </div>
         </CardContent>
@@ -423,27 +312,147 @@ export default function UserProfile() {
           <CardTitle>Recent Transactions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {userTransactions.slice(0, 5).map((txn) => (
-              <div
-                key={txn.id}
-                className="flex items-center justify-between py-2 border-b last:border-0"
-              >
-                <div>
-                  <p className="font-medium capitalize">{txn.type}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(txn.createdAt).toLocaleDateString('en-US')}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">{txn.finalAmount.toLocaleString()} VND</p>
-                  <p className="text-sm text-blue-600">+{txn.pointsEarned.toLocaleString()} pts</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <div className="space-y-3"></div>
         </CardContent>
       </Card>
+
+      {/* Update Profile */}
+      <Dialog
+        open={profileEditOpen}
+        onOpenChange={(open: boolean) => {
+          setProfileEditOpen(open);
+          if (!open) {
+            setUser({ ...currentUser });
+            setAvatarPreview(null);
+            setSelectedFile(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Profile</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex-1 min-w-0 space-y-4 text-sm md:text-base">
+              <div className="space-y-1">
+                <Label>Full Name</Label>
+                <Input
+                  value={user.full_name}
+                  onChange={(e) => setUser({ ...user, full_name: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label>Email</Label>
+                <Input value={user.email} disabled className="bg-gray-100" />
+              </div>
+              <div className="space-y-1">
+                <Label>Username</Label>
+                <Input
+                  value={user.username}
+                  onChange={(e) => setUser({ ...user, username: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label>Phone</Label>
+                <Input
+                  value={user.phone}
+                  onChange={(e) => setUser({ ...user, phone: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label>Avatar</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      const file = e.target.files[0];
+                      setSelectedFile(file);
+                      setAvatarPreview(URL.createObjectURL(file));
+                    }
+                  }}
+                />
+              </div>
+
+              <Button className="w-full mt-2" onClick={handleUpdateProfile} disabled={loading}>
+                {loading ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Update Password */}
+      <Dialog
+        open={passwordEditOpen}
+        onOpenChange={(isOpen) => {
+          setPasswordEditOpen(isOpen);
+
+          if (!isOpen) {
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+            setIsCapsLockOn(false);
+            setPasswordMismatch(false);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label>Current Password</Label>
+              <input
+                className="w-full border p-2 rounded"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                onKeyUp={handleKeyEvent}
+                onKeyDown={handleKeyEvent}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>New Password</Label>
+              <input
+                className="w-full border p-2 rounded"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                onKeyUp={handleKeyEvent}
+                onKeyDown={handleKeyEvent}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Confirm New Password</Label>
+              <input
+                className={`w-full border p-2 rounded ${passwordMismatch ? 'border-red-500' : ''}`}
+                type="password"
+                value={confirmPassword}
+                onChange={handleConfirmPasswordChange}
+                onKeyUp={handleKeyEvent}
+                onKeyDown={handleKeyEvent}
+              />
+              {passwordMismatch && (
+                <p className="text-sm text-red-600">❌ Passwords do not match</p>
+              )}
+            </div>
+
+            {isCapsLockOn && <p className="text-sm text-yellow-600">⚠️ Caps Lock is on</p>}
+            <Button className="w-full mt-2" onClick={handleUpdatePassword} disabled={loading}>
+              {loading ? 'Updating...' : 'Update Password'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

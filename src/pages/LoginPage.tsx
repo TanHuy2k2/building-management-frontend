@@ -15,12 +15,10 @@ import { getAccessToken } from '../services/tokenService';
 
 export default function AuthPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
-  // Login
+  const { fetchCurrentUser } = useAuth();
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  // Register
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerUsername, setRegisterUsername] = useState('');
   const [registerFullName, setRegisterFullName] = useState('');
@@ -42,7 +40,7 @@ export default function AuthPage() {
       sessionStorage.setItem('access_token', response.data.accessToken);
       localStorage.setItem('refresh_token', response.data.refreshToken);
 
-      login();
+      await fetchCurrentUser();
       toast.success('Login successful!');
 
       const responseUser: ResponseInterface = await getUserProfile();

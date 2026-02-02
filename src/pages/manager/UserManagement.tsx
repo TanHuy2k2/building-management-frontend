@@ -45,6 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
+import { resolveImageUrl } from '../../utils/image';
 
 export default function UserManagement() {
   const [users, setUsers] = useState<UserInterFace[]>([]);
@@ -268,12 +269,6 @@ export default function UserManagement() {
     }
   };
 
-  const resolveAvatar = (imageUrl?: string | null) => {
-    if (!imageUrl) return DEFAULT_AVATAR_URL;
-
-    return imageUrl.startsWith('http') ? imageUrl : `${ENV.BE_URL}/${imageUrl}`;
-  };
-
   return (
     <div className="space-y-6">
       {/* Header + Create button */}
@@ -449,7 +444,7 @@ export default function UserManagement() {
                 {/* LEFT: Avatar */}
                 <div className="size-12 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
                   <img
-                    src={resolveAvatar(user.image_url)}
+                    src={resolveImageUrl(user.image_url)}
                     alt={user.full_name}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -588,7 +583,7 @@ export default function UserManagement() {
                     }}
                   >
                     <img
-                      src={resolveAvatar(activeUser.image_url)}
+                      src={resolveImageUrl(activeUser.image_url)}
                       alt={activeUser.full_name}
                       style={{
                         width: '100%',
