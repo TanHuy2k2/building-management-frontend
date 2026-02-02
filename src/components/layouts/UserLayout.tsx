@@ -11,16 +11,29 @@ import {
   User,
   Bell,
   LogOut,
+  ChevronDown,
+  ChevronRight,
+  CalendarCheck,
+  Compass,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getRankDetails } from '../../utils/rank';
 import { resolveImageUrl } from '../../utils/image';
 import { DEFAULT_AVATAR_URL } from '../../utils/constants';
+import { useState } from 'react';
 
 export default function UserLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+
+  const toggleMenu = (key: string) => {
+    setOpenMenus((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
 
   const handleLogout = () => {
     logout();
@@ -33,7 +46,23 @@ export default function UserLayout() {
     { path: '/user/reservations', icon: Calendar, label: 'Reservations' },
     { path: '/user/parking', icon: ParkingCircle, label: 'Parking' },
     { path: '/user/bus', icon: Bus, label: 'Bus' },
-    { path: '/user/events', icon: PartyPopper, label: 'Events' },
+    {
+      icon: PartyPopper,
+      label: 'Events',
+      key: 'events',
+      children: [
+        {
+          path: '/user/events/my',
+          label: 'My Events',
+          icon: CalendarCheck,
+        },
+        {
+          path: '/user/events/upcoming',
+          label: 'Upcoming events',
+          icon: Compass,
+        },
+      ],
+    },
     { path: '/user/notifications', icon: Bell, label: 'Notifications' },
     { path: '/user/profile', icon: User, label: 'Profile' },
   ];
@@ -95,7 +124,7 @@ export default function UserLayout() {
             const isActive = location.pathname === item.path;
 
             return (
-              <Link key={item.path} to={item.path}>
+              <Link key={item.path} to={item.path ?? ''}>
                 <Button
                   variant={isActive ? 'secondary' : 'ghost'}
                   className="w-full flex-col h-auto py-2 px-1"
@@ -115,7 +144,86 @@ export default function UserLayout() {
         <nav className="p-4 space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+            const isActive =
+              location.pathname === item.path ||
+              (item.path !== '/user' && location.pathname.startsWith(item.path ?? ''));
+
+            if (item.children) {
+              const isOpen = openMenus[item.key];
+
+              return (
+                <div
+                  key={item.label}
+                  style={{
+                    position: 'relative',
+                    marginBottom: 0,
+                  }}
+                >
+                  {/* Parent */}
+                  <Button
+                    variant={isActive ? 'secondary' : 'ghost'}
+                    onClick={() => toggleMenu(item.key)}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-start',
+                    }}
+                  >
+                    <Icon className="size-4 mr-3" />
+                    {item.label}
+                    <span
+                      style={{ marginLeft: 'auto' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleMenu(item.key);
+                      }}
+                    >
+                      {isOpen ? (
+                        <ChevronDown className="size-4" />
+                      ) : (
+                        <ChevronRight className="size-4" />
+                      )}
+                    </span>
+                  </Button>
+
+                  {/* Children */}
+                  {isOpen && (
+                    <div
+                      style={{
+                        marginBottom: 0,
+                        marginLeft: 10,
+                        backgroundColor: '#fff',
+                      }}
+                    >
+                      {item.children.map((child) => {
+                        const isSubActive =
+                          location.pathname === child.path ||
+                          location.pathname.startsWith(child.path + '/');
+                        const ChildIcon = child.icon;
+
+                        return (
+                          <Link key={child.path} to={child.path}>
+                            <Button
+                              variant={isSubActive ? 'secondary' : 'ghost'}
+                              style={{
+                                width: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'flex-start',
+                              }}
+                            >
+                              <ChildIcon size={14} style={{ marginRight: 10 }} />
+                              {child.label}
+                            </Button>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
 
             return (
               <Link key={item.path} to={item.path}>

@@ -9,6 +9,7 @@ export enum EventBookingStatus {
 
 export interface EventBooking {
   id: string;
+  image_url?: string;
   event_title: string;
   description?: string;
   location?: string;
@@ -38,4 +39,5 @@ export interface GetEventParams {
 export interface EventBookingUI extends EventBooking {
   creator_name?: string;
   facility_name?: string;
+  building_name?: string;
 }

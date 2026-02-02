@@ -821,6 +821,10 @@
     max-height: var(--radix-select-content-available-height);
   }
 
+  .max-h-\[300px\] {
+    max-height: 300px;
+  }
+
   .min-h-16 {
     min-height: calc(var(--spacing) * 16);
   }
@@ -1854,6 +1858,10 @@
   .last\:border-0:last-child {
     border-style: var(--tw-border-style);
     border-width: 0;
+  }
+
+  .object-contain {
+    object-fit: contain;
   }
 
   @media (hover: hover) {
