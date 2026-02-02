@@ -25,7 +25,8 @@ import UserOrders from '../pages/user/Orders';
 import UserReservations from '../pages/user/Reservations';
 import UserParking from '../pages/user/Parking';
 import UserBus from '../pages/user/Bus';
-import UserEvents from '../pages/user/Events';
+import UpcomingEvents from '../pages/user/Events/UpcomingEvents';
+import MyEvents from '../pages/user/Events/MyEvents';
 import UserProfile from '../pages/user/Profile';
 import UserNotifications from '../pages/user/Notifications';
 import BuildingManagement from '../pages/manager/BuildingManagement';
@@ -67,7 +68,8 @@ export const router = createBrowserRouter([
       { path: 'reservations', Component: UserReservations },
       { path: 'parking', Component: UserParking },
       { path: 'bus', Component: UserBus },
-      { path: 'events', Component: UserEvents },
+      { path: 'events/upcoming', Component: UpcomingEvents },
+      { path: 'events/my', Component: MyEvents },
       { path: 'profile', Component: UserProfile },
       { path: 'notifications', Component: UserNotifications },
     ],
