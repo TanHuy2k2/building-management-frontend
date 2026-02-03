@@ -6,7 +6,12 @@ import { ImageWithFallback } from '../../../components/figma/ImageWithFallback';
 import { Calendar, MapPin, Users, Clock, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAllEventApi } from '../../../services/eventService';
-import { EventBookingStatus, EventBookingUI, OrderDirection } from '../../../types';
+import {
+  EventBookingStatus,
+  EventBookingUI,
+  EventRegistration,
+  OrderDirection,
+} from '../../../types';
 import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, ENV } from '../../../utils/constants';
 import { getPaginationNumbers } from '../../../utils/pagination';
 import { getFacilityByIdApi } from '../../../services/facilityService';
@@ -14,6 +19,10 @@ import { getReservationByIdApi } from '../../../services/facilityReservationServ
 import { getBuildingByIdApi } from '../../../services/buildingService';
 import { formatDateVN, formatTimeVN } from '../../../utils/time';
 import { Input } from '../../../components/ui/input';
+import {
+  getEventRegistrationByUserApi,
+  registerEventApi,
+} from '../../../services/eventRegistration';
 
 export default function UpcomingEvents() {
   const [events, setEvents] = useState<EventBookingUI[]>([]);
@@ -36,17 +45,17 @@ export default function UpcomingEvents() {
         order_by: 'start_time',
         order: OrderDirection.ASCENDING,
       };
-      const res = await getAllEventApi(params);
-      if (!res.success) {
-        toast.error(res.message);
+      const [eventRes, regRes] = await Promise.all([
+        getAllEventApi(params),
+        getEventRegistrationByUserApi(),
+      ]);
 
-        return;
-      }
-
-      setEvents(res.data.eventBookings);
-      setTotalPage(res.data.pagination.total_page);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to fetch events');
+      const registeredIds = regRes.data.map((r: any) => r.event_booking_id);
+      const allEvents = eventRes.data.eventBookings;
+      const filteredEvents = allEvents.filter((e: EventBookingUI) => !registeredIds.includes(e.id));
+      setEvents(filteredEvents);
+    } catch (err) {
+      toast.error('Fetch failed');
     } finally {
       setLoading(false);
     }
@@ -61,6 +70,23 @@ export default function UpcomingEvents() {
     fetchEvents(page);
   }, [page]);
 
+  const handleRegister = async (eventId: string) => {
+    try {
+      const res = await registerEventApi(eventId);
+      if (!res.success) {
+        toast.error(res.message || 'Register failed');
+
+        return;
+      }
+
+      toast.success('Registered successfully 🎉');
+
+      fetchEvents(page);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to register event');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -69,8 +95,6 @@ export default function UpcomingEvents() {
           <h1 className="text-2xl font-semibold">Community Events</h1>
           <p className="text-muted-foreground">Join community activities</p>
         </div>
-
-        <Button>Create</Button>
       </div>
 
       {/* Search */}
@@ -88,88 +112,94 @@ export default function UpcomingEvents() {
       </div>
 
       {/* Loading */}
-      {loading && <p className="text-muted-foreground">Loading events...</p>}
+      {loading ? (
+        <p className="text-muted-foreground">Loading events...</p>
+      ) : (
+        /* Events List */
+        <div className="grid gap-6">
+          {events.map((event) => {
+            const spotsLeft = event.max_participants - event.current_participants;
+            const percentFull = (event.current_participants / event.max_participants) * 100;
 
-      {/* Events List */}
-      <div className="grid gap-6">
-        {events.map((event) => {
-          const spotsLeft = event.max_participants - event.current_participants;
-          const percentFull = (event.current_participants / event.max_participants) * 100;
-
-          return (
-            <Card key={event.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-xl">{event.event_title}</CardTitle>
-                  <Badge className="bg-green-50 text-green-700" variant="outline">
-                    Approved
-                  </Badge>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                {event.image_url && (
-                  <ImageWithFallback
-                    src={`${ENV.BE_URL}/${event.image_url}`}
-                    alt={event.event_title}
-                    className="w-full max-h-[300px] sm:max-h-[180px] object-contain rounded-lg"
-                  />
-                )}
-
-                <p className="text-muted-foreground">{event.description}</p>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="size-4 text-muted-foreground" />
-                    <span>{event.location || '—'}</span>
+            return (
+              <Card key={event.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <CardTitle className="text-xl">{event.event_title}</CardTitle>
+                    <Badge className="bg-green-50 text-green-700" variant="outline">
+                      Approved
+                    </Badge>
                   </div>
+                </CardHeader>
 
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="size-4 text-muted-foreground" />
-                    <span>{formatDateVN(event.start_time)}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="size-4 text-muted-foreground" />
-                    <span>
-                      {formatTimeVN(event.start_time)} - {formatTimeVN(event.end_time)}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="size-4 text-muted-foreground" />
-                    <span>
-                      {event.current_participants}/{event.max_participants} participants
-                    </span>
-                  </div>
-                </div>
-
-                {/* Progress */}
-                <div className="border-t pt-4 space-y-3">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full ${
-                        percentFull >= 90 ? 'bg-red-600' : 'bg-blue-600'
-                      }`}
-                      style={{ width: `${percentFull}%` }}
+                <CardContent className="space-y-4">
+                  {event.image_url && (
+                    <ImageWithFallback
+                      src={`${ENV.BE_URL}/${event.image_url}`}
+                      alt={event.event_title}
+                      className="w-full max-h-[300px] sm:max-h-[180px] object-contain rounded-lg"
                     />
-                  </div>
-
-                  {spotsLeft > 0 ? (
-                    <p className="text-sm text-muted-foreground">{spotsLeft} spots left</p>
-                  ) : (
-                    <p className="text-sm text-red-600">Fully booked</p>
                   )}
 
-                  <Button className="w-full" disabled={spotsLeft === 0}>
-                    {spotsLeft > 0 ? 'Register' : 'Full'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                  <p className="text-muted-foreground">{event.description}</p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="size-4 text-muted-foreground" />
+                      <span>{event.location || '—'}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="size-4 text-muted-foreground" />
+                      <span>{formatDateVN(event.start_time)}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="size-4 text-muted-foreground" />
+                      <span>
+                        {formatTimeVN(event.start_time)} - {formatTimeVN(event.end_time)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm">
+                      <Users className="size-4 text-muted-foreground" />
+                      <span>
+                        {event.current_participants}/{event.max_participants} participants
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Progress */}
+                  <div className="border-t pt-4 space-y-3">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full ${
+                          percentFull >= 90 ? 'bg-red-600' : 'bg-blue-600'
+                        }`}
+                        style={{ width: `${percentFull}%` }}
+                      />
+                    </div>
+
+                    {spotsLeft > 0 ? (
+                      <p className="text-sm text-muted-foreground">{spotsLeft} spots left</p>
+                    ) : (
+                      <p className="text-sm text-red-600">Fully booked</p>
+                    )}
+
+                    <Button
+                      className="w-full"
+                      disabled={spotsLeft === 0}
+                      onClick={() => handleRegister(event.id)}
+                    >
+                      {spotsLeft > 0 ? 'Register' : 'Full'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {/* Empty State */}
       {!loading && events.length === 0 && (
