@@ -14,3 +14,4 @@ export * from './busSubscription';
 export * from './eventBooking';
 export * from './dish';
 export * from './order';
+export * from './eventRegistration';
