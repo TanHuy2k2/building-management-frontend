@@ -28,6 +28,7 @@ export interface EventBooking {
 }
 
 export interface GetEventParams {
+  created_by?: string;
   event_title?: string;
   status?: string;
   page?: number;
