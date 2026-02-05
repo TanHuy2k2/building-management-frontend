@@ -38,3 +38,27 @@ export async function registerEventApi(event_booking_id: string): Promise<Respon
     throw new Error(error.message);
   }
 }
+
+export async function cancelEventApi(
+  event_registration_id: string,
+  event_booking_id: string,
+): Promise<ResponseInterface> {
+  try {
+    const accessToken = await getAccessToken();
+    const response: ResponseInterface = await apiRequest(
+      API_ENDPOINTS.CANCEL_EVENT_REGISTRATIONS(event_registration_id),
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ event_booking_id }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    );
+
+    return response;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}

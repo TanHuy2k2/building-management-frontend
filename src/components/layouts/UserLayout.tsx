@@ -146,7 +146,7 @@ export default function UserLayout() {
             const Icon = item.icon;
             const isActive =
               location.pathname === item.path ||
-              (item.path !== '/user' && location.pathname.startsWith(item.path ?? ''));
+              (item.path && item.path !== '/user' && location.pathname.startsWith(item.path));
 
             if (item.children) {
               const isOpen = openMenus[item.key];

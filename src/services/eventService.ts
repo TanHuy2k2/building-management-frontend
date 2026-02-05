@@ -41,3 +41,19 @@ export async function updateEventStatusApi(
     throw new Error(error.message);
   }
 }
+
+export async function getEventByIdApi(id: string): Promise<ResponseInterface> {
+  try {
+    const token = await getAccessToken();
+    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.EVENT_BY_ID(id), {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}

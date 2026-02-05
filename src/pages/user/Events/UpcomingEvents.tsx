@@ -10,6 +10,7 @@ import {
   EventBookingStatus,
   EventBookingUI,
   EventRegistration,
+  EventRegistrationStatus,
   OrderDirection,
 } from '../../../types';
 import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, ENV } from '../../../utils/constants';
@@ -49,11 +50,14 @@ export default function UpcomingEvents() {
         getAllEventApi(params),
         getEventRegistrationByUserApi(),
       ]);
-
-      const registeredIds = regRes.data.map((r: any) => r.event_booking_id);
+      const registrations = regRes.data;
+      const registeredIds = registrations
+        .filter((r: any) => r.status === EventRegistrationStatus.REGISTERED)
+        .map((r: any) => r.event_booking_id);
       const allEvents = eventRes.data.eventBookings;
       const filteredEvents = allEvents.filter((e: EventBookingUI) => !registeredIds.includes(e.id));
       setEvents(filteredEvents);
+      setTotalPage(filteredEvents.length);
     } catch (err) {
       toast.error('Fetch failed');
     } finally {
