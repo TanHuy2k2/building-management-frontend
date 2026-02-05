@@ -9,15 +9,11 @@ import { getAllEventApi } from '../../../services/eventService';
 import {
   EventBookingStatus,
   EventBookingUI,
-  EventRegistration,
   EventRegistrationStatus,
   OrderDirection,
 } from '../../../types';
 import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, ENV } from '../../../utils/constants';
 import { getPaginationNumbers } from '../../../utils/pagination';
-import { getFacilityByIdApi } from '../../../services/facilityService';
-import { getReservationByIdApi } from '../../../services/facilityReservationService';
-import { getBuildingByIdApi } from '../../../services/buildingService';
 import { formatDateVN, formatTimeVN } from '../../../utils/time';
 import { Input } from '../../../components/ui/input';
 import {
