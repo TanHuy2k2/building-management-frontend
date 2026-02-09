@@ -583,7 +583,7 @@ export default function UserOrders() {
         <Tabs value={activeCategory} onValueChange={setActiveCategory} className="space-y-4">
           <TabsList>
             {categories.map((category) => (
-              <TabsTrigger key={category} value={category}>
+              <TabsTrigger key={category} value={category} className="px-4">
                 {formatSnakeCase(category)}
               </TabsTrigger>
             ))}

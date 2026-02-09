@@ -24,7 +24,7 @@ import {
   DialogTrigger,
 } from '../../components/ui/dialog';
 
-export default function NotificationsManagement() {
+export default function InformationManagement() {
   const [notifications] = useState(mockNotifications);
   const [open, setOpen] = useState(false);
 

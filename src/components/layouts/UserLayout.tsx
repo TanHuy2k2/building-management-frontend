@@ -63,7 +63,7 @@ export default function UserLayout() {
         },
       ],
     },
-    { path: '/user/notifications', icon: Bell, label: 'Notifications' },
+    { path: '/user/information', icon: Bell, label: 'Information' },
     { path: '/user/profile', icon: User, label: 'Profile' },
   ];
 

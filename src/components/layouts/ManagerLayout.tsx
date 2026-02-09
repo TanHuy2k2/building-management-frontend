@@ -48,7 +48,7 @@ export default function ManagerLayout() {
 
   const menuItems = [
     { path: '/manager', icon: LayoutDashboard, label: 'Overview' },
-    { path: '/manager/notifications', icon: Bell, label: 'Notifications' },
+    { path: '/manager/information', icon: Bell, label: 'Information' },
     { path: '/manager/parking', icon: ParkingCircle, label: 'Parking' },
     {
       icon: Bus,
