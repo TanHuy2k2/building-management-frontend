@@ -5,7 +5,7 @@ import UserLayout from '../components/layouts/UserLayout';
 
 // Manager Pages
 import ManagerDashboard from '../pages/manager/Dashboard';
-import NotificationsManagement from '../pages/manager/NotificationsManagement';
+import InformationManagement from '../pages/manager/InformationManagement';
 import OrdersManagement from '../pages/manager/OrdersManagement';
 import ReservationManagement from '../pages/manager/ReservationManagement';
 import ParkingManagement from '../pages/manager/ParkingManagement';
@@ -28,7 +28,7 @@ import UserBus from '../pages/user/Bus';
 import UpcomingEvents from '../pages/user/Events/UpcomingEvents';
 import MyEvents from '../pages/user/Events/MyEvents';
 import UserProfile from '../pages/user/Profile';
-import UserNotifications from '../pages/user/Notifications';
+import UserInformation from '../pages/user/Information';
 import BuildingManagement from '../pages/manager/BuildingManagement';
 import FacilityManagement from '../pages/manager/FacilityManagement';
 
@@ -43,7 +43,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: ManagerDashboard },
       { path: 'buildings', Component: BuildingManagement },
-      { path: 'notifications', Component: NotificationsManagement },
+      { path: 'information', Component: InformationManagement },
       { path: 'orders', Component: OrdersManagement },
       { path: 'parking', Component: ParkingManagement },
       { path: 'bus', Component: BusManagement },
@@ -71,7 +71,7 @@ export const router = createBrowserRouter([
       { path: 'events/upcoming', Component: UpcomingEvents },
       { path: 'events/my', Component: MyEvents },
       { path: 'profile', Component: UserProfile },
-      { path: 'notifications', Component: UserNotifications },
+      { path: 'information', Component: UserInformation },
     ],
   },
 ]);

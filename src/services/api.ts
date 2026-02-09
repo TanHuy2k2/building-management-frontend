@@ -131,9 +131,9 @@ export const API_ENDPOINTS = {
   CANCEL_EVENT_REGISTRATIONS: (id: string) => `/event_registrations/${id}/cancel`,
 
   // Notifications
-  NOTIFICATIONS: '/notifications',
-  CREATE_NOTIFICATION: '/notifications',
-  MARK_NOTIFICATION_READ: (id: string) => `/notifications/${id}/read`,
+  INFORMATION: '/information',
+  CREATE_INFORMATION: '/information/create',
+  INFORMATION_BY_ID: (id: string) => `/information/${id}`,
 
   // Transactions
   TRANSACTIONS: '/transactions',
