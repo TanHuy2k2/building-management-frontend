@@ -57,3 +57,20 @@ export async function getEventByIdApi(id: string): Promise<ResponseInterface> {
     throw new Error(error.message);
   }
 }
+
+export async function createEventApi(data: FormData): Promise<ResponseInterface> {
+  try {
+    const accessToken = await getAccessToken();
+    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.CREATE_EVENT, {
+      method: 'POST',
+      body: data,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    return response;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
