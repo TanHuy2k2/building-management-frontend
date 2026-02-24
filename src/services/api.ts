@@ -1,9 +1,20 @@
 import { ENV } from '../utils/constants';
 
-export async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${ENV.BE_API_URL}${endpoint}`, {
-    ...options,
-  });
+export async function apiRequest<T>(
+  endpoint: string,
+  options?: RequestInit,
+  payment = false,
+): Promise<T> {
+  let response;
+  if (payment) {
+    response = await fetch(`${ENV.BE_URL}${endpoint}`, {
+      ...options,
+    });
+  } else {
+    response = await fetch(`${ENV.BE_API_URL}${endpoint}`, {
+      ...options,
+    });
+  }
 
   return response.json();
 }
@@ -134,6 +145,12 @@ export const API_ENDPOINTS = {
   INFORMATION: '/information',
   CREATE_INFORMATION: '/information/create',
   INFORMATION_BY_ID: (id: string) => `/information/${id}`,
+
+  // Payments
+  CREATE_PAYMENT: '/payments/create',
+  CREATE_MOMO_PAYMENT: '/momo/create',
+  CREATE_VNPAY_PAYMENT: '/vnpay/create',
+  PAYMENT_BY_ID: (id: string) => `/payments/${id}`,
 
   // Transactions
   TRANSACTIONS: '/transactions',

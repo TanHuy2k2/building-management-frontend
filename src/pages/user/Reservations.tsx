@@ -32,6 +32,8 @@ import {
   getReservationByUserApi,
 } from '../../services/facilityReservationService';
 import { durationHours } from '../../utils/time';
+import PaymentMethodSelector from '../PaymentMethod';
+import { PaymentReferenceType } from '../../types/payment';
 
 export default function UserReservations() {
   const [openReserve, setOpenReserve] = useState(false);
@@ -55,6 +57,11 @@ export default function UserReservations() {
   const [viewMode, setViewMode] = useState<ViewMode>('reserve');
   const [myReservations, setMyReservations] = useState<FacilityReservation[]>([]);
   const [facilityMap, setFacilityMap] = useState<Record<string, Facility>>({});
+  const [step, setStep] = useState<1 | 2>(1);
+  const [createdReservation, setCreatedReservation] = useState<{
+    id: string;
+    finalAmount: number;
+  } | null>(null);
 
   useEffect(() => {
     setPage(DEFAULT_PAGE);
@@ -144,13 +151,10 @@ export default function UserReservations() {
         return;
       }
 
-      toast.success('Reservation created successfully');
+      toast.success('Reservation created. Please complete payment');
 
-      setOpenReserve(false);
-      setForm(initialForm);
-      setSelectedFacility(null);
-
-      fetchFacilities();
+      setCreatedReservation(res.data);
+      setStep(2);
     } catch (error) {
       toast.error('Failed to create reservation');
     } finally {
@@ -183,91 +187,127 @@ export default function UserReservations() {
     },
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.size) {
+      const status = params.get('payment');
+      if (!status) {
+        toast.error('Payment failed!');
+
+        return;
+      }
+
+      toast.success('Payment successful!');
+    }
+  }, []);
+
+  const url = window.location.href;
+
   return (
     <div className="space-y-6">
       {/* Reserve Dialog */}
       <Dialog open={openReserve} onOpenChange={setOpenReserve}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Reserve Facility</DialogTitle>
+            <DialogTitle>{step === 1 ? 'Reserve Facility' : 'Payment'}</DialogTitle>
             <DialogDescription>{selectedFacility?.name}</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-2">
-            <div className="space-y-2">
-              <Label>Start Date</Label>
-              <Input
-                type="datetime-local"
-                value={form.start_date ? new Date(form.start_date).toISOString().slice(0, 16) : ''}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    start_date: new Date(e.target.value),
-                  }))
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Duration (hours)</Label>
-              <Input
-                type="number"
-                min={1}
-                value={form.hour_duration}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    hour_duration: Number(e.target.value),
-                  }))
-                }
-              />
-            </div>
-
-            {selectedFacility?.facility_type !== FacilityType.ROOM && (
+          {/* STEP 1: RESERVATION FORM */}
+          {step === 1 && (
+            <div className="space-y-3">
               <div className="space-y-2">
-                <Label>Points Used</Label>
+                <Label>Start Date</Label>
                 <Input
-                  type="number"
-                  min={0}
-                  value={form.points_used}
+                  type="datetime-local"
+                  value={
+                    form.start_date ? new Date(form.start_date).toISOString().slice(0, 16) : ''
+                  }
                   onChange={(e) =>
                     setForm((prev) => ({
                       ...prev,
-                      points_used: Number(e.target.value),
+                      start_date: new Date(e.target.value) || undefined,
                     }))
                   }
                 />
               </div>
-            )}
 
-            {/* Note */}
-            <div
-              style={{
-                fontSize: 12,
-                color: '#6b7280',
-                marginBottom: 16,
-                fontStyle: 'italic',
-              }}
-            >
-              * If start time is not selected, the parking will start from tomorrow.
+              <div className="space-y-2">
+                <Label>Duration (hours)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.hour_duration}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      hour_duration: Number(e.target.value),
+                    }))
+                  }
+                />
+              </div>
+
+              {selectedFacility?.facility_type !== FacilityType.ROOM && (
+                <div className="space-y-2">
+                  <Label>Points Used</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.points_used}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        points_used: Number(e.target.value),
+                      }))
+                    }
+                  />
+                </div>
+              )}
+
+              <div className="text-xs text-muted-foreground italic">
+                * If start time is not selected, the parking will start from tomorrow.
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3">
+                <Button variant="outline" onClick={() => setOpenReserve(false)}>
+                  Cancel
+                </Button>
+
+                <Button onClick={handleReserve} disabled={loading}>
+                  {loading ? 'Creating...' : 'Continue to Payment'}
+                </Button>
+              </div>
             </div>
+          )}
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setOpenReserve(false);
-                  setSelectedFacility(null);
-                }}
-              >
-                Cancel
-              </Button>
+          {/* STEP 2: PAYMENT */}
+          {step === 2 && createdReservation && (
+            <div className="space-y-4">
+              {/* Summary */}
+              <div className="border rounded-lg p-4 bg-gray-50 space-y-1 text-sm">
+                <p>
+                  <b>Facility:</b> {selectedFacility?.name}
+                </p>
+                <p>
+                  <b>Start:</b> {form.start_date?.toLocaleString('vi-VN')}
+                </p>
+                <p>
+                  <b>Duration:</b> {form.hour_duration} hours
+                </p>
+                <p>
+                  <b>Total:</b> {formatVND(createdReservation.finalAmount)}
+                </p>
+              </div>
 
-              <Button onClick={handleReserve} disabled={loading}>
-                {loading ? 'Reserving...' : 'Confirm'}
-              </Button>
+              {/* Payment Method */}
+              <PaymentMethodSelector
+                amount={createdReservation.finalAmount}
+                reference_id={createdReservation.id}
+                reference_type={PaymentReferenceType.FACILITY_RESERVATION}
+                returnUrl={url}
+              />
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
 
