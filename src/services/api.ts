@@ -151,12 +151,4 @@ export const API_ENDPOINTS = {
   CREATE_MOMO_PAYMENT: '/momo/create',
   CREATE_VNPAY_PAYMENT: '/vnpay/create',
   PAYMENT_BY_ID: (id: string) => `/payments/${id}`,
-
-  // Transactions
-  TRANSACTIONS: '/transactions',
-  USER_TRANSACTIONS: (userId: string) => `/users/${userId}/transactions`,
-
-  // Dashboard
-  DASHBOARD_STATS: '/dashboard/stats',
-  REVENUE_BY_SERVICE: '/dashboard/revenue-by-service',
 };
