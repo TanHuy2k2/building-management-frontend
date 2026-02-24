@@ -16,3 +16,4 @@ export * from './dish';
 export * from './order';
 export * from './eventRegistration';
 export * from './information';
+export * from './payment';

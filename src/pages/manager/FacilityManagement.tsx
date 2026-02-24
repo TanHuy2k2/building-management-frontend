@@ -208,6 +208,7 @@ export default function FacilityManagement() {
       }
 
       await fetchFacilities(DEFAULT_PAGE);
+      setPage(DEFAULT_PAGE);
 
       toast.success(mode === 'edit' ? 'Updated successfully' : 'Created successfully');
 
