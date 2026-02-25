@@ -42,7 +42,7 @@ export async function getInformationById(id: string): Promise<ResponseInterface>
 export async function createInformation(payload: CreateInformationDto): Promise<ResponseInterface> {
   try {
     const token = await getAccessToken();
-    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.INFORMATION, {
+    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.CREATE_INFORMATION, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
