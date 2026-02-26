@@ -34,8 +34,12 @@ import {
 import { durationHours } from '../../utils/time';
 import PaymentMethodSelector from '../PaymentMethod';
 import { PaymentReferenceType } from '../../types/payment';
+import { useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function UserReservations() {
+  const location = useLocation();
+  const { currentUser } = useAuth();
   const [openReserve, setOpenReserve] = useState(false);
   const [facilities, setFacilities] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -153,6 +157,15 @@ export default function UserReservations() {
 
       toast.success('Reservation created. Please complete payment');
 
+      if (!selectedFacility.base_price) {
+        setForm(initialForm);
+        fetchFacilities(DEFAULT_PAGE);
+        setOpenReserve(false);
+        setFacilityMap((prev) => ({ ...prev, [selectedFacility.id]: selectedFacility }));
+
+        return;
+      }
+
       setCreatedReservation(res.data);
       setStep(2);
     } catch (error) {
@@ -189,24 +202,37 @@ export default function UserReservations() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (params.size) {
-      const status = params.get('payment');
-      if (!status) {
-        toast.error('Payment failed!');
-
-        return;
-      }
-
+    const paymentStatus = params.get('payment');
+    if (paymentStatus === 'success') {
       toast.success('Payment successful!');
+      setForm(initialForm);
+      setStep(1);
+      setCreatedReservation({ id: '', finalAmount: 0 });
+    } else if (paymentStatus === 'failed') {
+      toast.error('Payment failed!');
     }
-  }, []);
 
-  const url = window.location.href;
+    if (paymentStatus) {
+      window.history.replaceState({}, '', location.pathname);
+    }
+  }, [location.search]);
+
+  const url = new URL(window.location.origin + location.pathname);
+  const returnUrl = url.toString();
 
   return (
     <div className="space-y-6">
       {/* Reserve Dialog */}
-      <Dialog open={openReserve} onOpenChange={setOpenReserve}>
+      <Dialog
+        open={openReserve}
+        onOpenChange={() => {
+          setOpenReserve(false);
+          setForm(initialForm);
+          setStep(1);
+          setCreatedReservation({ id: '', finalAmount: 0 });
+          fetchFacilities(DEFAULT_PAGE);
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{step === 1 ? 'Reserve Facility' : 'Payment'}</DialogTitle>
@@ -214,71 +240,129 @@ export default function UserReservations() {
           </DialogHeader>
 
           {/* STEP 1: RESERVATION FORM */}
-          {step === 1 && (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Input
-                  type="datetime-local"
-                  value={
-                    form.start_date ? new Date(form.start_date).toISOString().slice(0, 16) : ''
-                  }
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      start_date: new Date(e.target.value) || undefined,
-                    }))
-                  }
-                />
-              </div>
+          {step === 1 &&
+            selectedFacility &&
+            (() => {
+              const userPoints = currentUser?.points || 0;
+              const total = selectedFacility.base_price * form.hour_duration;
+              const maxPointsByOrder = Math.floor(total / 1000);
+              const maxPointsUsable = Math.min(userPoints, maxPointsByOrder);
+              const safePointsUsed = Math.min(form.points_used, maxPointsUsable);
+              const estimatedTotal = total - safePointsUsed * 1000;
+              const pointsUsed = form.points_used;
 
-              <div className="space-y-2">
-                <Label>Duration (hours)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={form.hour_duration}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      hour_duration: Number(e.target.value),
-                    }))
-                  }
-                />
-              </div>
+              return (
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    You have: <span className="font-semibold">{userPoints}</span> points
+                  </p>
 
-              {selectedFacility?.facility_type !== FacilityType.ROOM && (
-                <div className="space-y-2">
-                  <Label>Points Used</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.points_used}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        points_used: Number(e.target.value),
-                      }))
-                    }
-                  />
+                  <div className="space-y-2">
+                    <Label>Start Date</Label>
+                    <Input
+                      type="datetime-local"
+                      value={
+                        form.start_date ? new Date(form.start_date).toISOString().slice(0, 16) : ''
+                      }
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          start_date: new Date(e.target.value) || undefined,
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Duration (hours)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={form.hour_duration}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          hour_duration: Number(e.target.value),
+                        }))
+                      }
+                    />
+                  </div>
+
+                  {selectedFacility?.facility_type !== FacilityType.ROOM && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Points Used</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.points_used}
+                          onChange={(e) => {
+                            const value = Number(e.target.value) || 0;
+                            if (value > maxPointsUsable) {
+                              setForm((prev) => ({
+                                ...prev,
+                                points_used: maxPointsUsable,
+                              }));
+                            } else if (value < 0) {
+                              setForm((prev) => ({
+                                ...prev,
+                                points_used: 0,
+                              }));
+                            } else {
+                              setForm((prev) => ({
+                                ...prev,
+                                points_used: Number(e.target.value),
+                              }));
+                            }
+                          }}
+                        />
+                      </div>
+
+                      {pointsUsed > 0 && pointsUsed <= maxPointsUsable && (
+                        <p className="text-xs text-green-600">− {formatVND(pointsUsed * 1000)}</p>
+                      )}
+                    </>
+                  )}
+
+                  <div className="text-xs text-muted-foreground italic">
+                    * If start time is not selected, the parking will start from tomorrow.
+                  </div>
+
+                  <div className="border-t pt-3 space-y-2 text-sm pb-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span>{formatVND(total)}</span>
+                    </div>
+
+                    {safePointsUsed > 0 && (
+                      <div className="flex justify-between text-red-500">
+                        <span>Membership points</span>
+                        <span>-{formatVND(safePointsUsed * 1000)}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between font-semibold text-base pt-2 border-t">
+                      <span>Estimated total</span>
+                      <span>{formatVND(estimatedTotal)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3">
+                    <Button variant="outline" onClick={() => setOpenReserve(false)}>
+                      Cancel
+                    </Button>
+
+                    <Button onClick={handleReserve} disabled={loading}>
+                      {loading
+                        ? 'Creating...'
+                        : selectedFacility?.base_price
+                          ? 'Continue to Payment'
+                          : 'Submit'}
+                    </Button>
+                  </div>
                 </div>
-              )}
-
-              <div className="text-xs text-muted-foreground italic">
-                * If start time is not selected, the parking will start from tomorrow.
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3">
-                <Button variant="outline" onClick={() => setOpenReserve(false)}>
-                  Cancel
-                </Button>
-
-                <Button onClick={handleReserve} disabled={loading}>
-                  {loading ? 'Creating...' : 'Continue to Payment'}
-                </Button>
-              </div>
-            </div>
-          )}
+              );
+            })()}
 
           {/* STEP 2: PAYMENT */}
           {step === 2 && createdReservation && (
@@ -304,7 +388,7 @@ export default function UserReservations() {
                 amount={createdReservation.finalAmount}
                 reference_id={createdReservation.id}
                 reference_type={PaymentReferenceType.FACILITY_RESERVATION}
-                returnUrl={url}
+                returnUrl={returnUrl}
               />
             </div>
           )}

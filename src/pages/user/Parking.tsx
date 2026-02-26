@@ -12,19 +12,29 @@ import {
   ParkingSpaceType,
   ParkingSubscription,
   ParkingSubscriptionStatus,
+  PaymentReferenceType,
 } from '../../types';
+import { useLocation } from 'react-router-dom';
 import { getAllBuildingApi } from '../../services/buildingService';
 import { getAllParkingApi } from '../../services/parkingSpaceService';
 import { formatVND } from '../../utils/currency';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog';
 import {
   createParkingSubscriptionApi,
   getParkingSubscriptionsApi,
 } from '../../services/parkingSubscriptionService';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import PaymentMethodSelector from '../PaymentMethod';
 
 export default function UserParking() {
+  const location = useLocation();
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
   const [parkingSpaces, setParkingSpaces] = useState<ParkingSpace[]>([]);
@@ -33,7 +43,7 @@ export default function UserParking() {
   const [selectedSpace, setSelectedSpace] = useState<ParkingSpace | null>(null);
   const [form, setForm] = useState<ParkingSubscriptionForm>({
     month_duration: 1,
-    base_amount: 0,
+    points_used: 0,
   });
   const { currentUser } = useAuth();
   const [parkingSubscriptionMap, setParkingSubscriptionMap] = useState<
@@ -42,6 +52,11 @@ export default function UserParking() {
   const [selectedMySubscription, setSelectedMySubscription] = useState<ParkingSubscription | null>(
     null,
   );
+  const [step, setStep] = useState<1 | 2>(1);
+  const [createdSubscription, setCreatedSubscription] = useState<{
+    id: string;
+    finalAmount: number;
+  } | null>(null);
 
   /* ================= FETCH BUILDINGS ================= */
   useEffect(() => {
@@ -190,27 +205,69 @@ export default function UserParking() {
 
       toast.success('Parking registered successfully');
 
-      setSelectedSpace(null);
-      setForm({ month_duration: 1, base_amount: 0 });
-      if (selectedBuilding) {
-        await fetchParkingSpaces(selectedBuilding);
-      }
+      setCreatedSubscription({ id: res.data.id, finalAmount: res.data.finalAmount });
+      setStep(2);
     } catch {
       toast.error('Failed to register parking');
     }
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const paymentStatus = params.get('payment');
+    const buildingId = params.get('buildingId');
+    if (buildingId) {
+      const foundBuilding = buildings.find((b) => b.id === buildingId);
+      if (foundBuilding) {
+        setSelectedBuilding(foundBuilding);
+        fetchParkingSpaces(foundBuilding);
+      }
+    }
+
+    if (paymentStatus === 'success') {
+      toast.success('Payment successful!');
+      setForm({ month_duration: 1, points_used: 0 });
+      setStep(1);
+      setCreatedSubscription({ id: '', finalAmount: 0 });
+    } else if (paymentStatus === 'failed') {
+      toast.error('Payment failed!');
+    }
+
+    if (paymentStatus) {
+      window.history.replaceState({}, '', location.pathname);
+    }
+  }, [location.search, buildings]);
+
+  const url = new URL(window.location.origin + location.pathname);
+  if (selectedBuilding) {
+    url.searchParams.set('buildingId', selectedBuilding.id);
+  }
+  const returnUrl = url.toString();
+
   /* ================= UI ================= */
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
       {/** DIALOG */}
-      <Dialog open={!!selectedSpace} onOpenChange={() => setSelectedSpace(null)}>
+      <Dialog
+        open={!!selectedSpace}
+        onOpenChange={() => {
+          setSelectedSpace(null);
+          setForm({ month_duration: 1, points_used: 0 });
+          setStep(1);
+          setCreatedSubscription({ id: '', finalAmount: 0 });
+          if (selectedBuilding) {
+            fetchParkingSpaces(selectedBuilding);
+          }
+        }}
+      >
         <DialogContent style={{ maxWidth: 760 }}>
           <DialogHeader>
             <DialogTitle>Parking Space Registration</DialogTitle>
+            <DialogDescription>Complete form</DialogDescription>
           </DialogHeader>
 
-          {selectedSpace && (
+          {/* STEP 1: RESERVATION FORM */}
+          {step === 1 && selectedSpace && (
             <div
               style={{
                 display: 'grid',
@@ -249,11 +306,11 @@ export default function UserParking() {
                   <InfoRow label="Customer" value={currentUser?.full_name} />
                   <InfoRow
                     label="Start time"
-                    value={new Date(selectedMySubscription.start_time).toLocaleDateString()}
+                    value={new Date(selectedMySubscription.start_date).toLocaleDateString()}
                   />
                   <InfoRow
                     label="End time"
-                    value={new Date(selectedMySubscription.end_time).toLocaleDateString()}
+                    value={new Date(selectedMySubscription.end_date).toLocaleDateString()}
                   />
 
                   <hr style={{ margin: '12px 0' }} />
@@ -295,83 +352,170 @@ export default function UserParking() {
                   </div>
                 </div>
               ) : (
-                /* ================= RIGHT: REGISTER ================= */
-                <div
-                  style={{
-                    border: '1px solid #e5e7eb',
-                    borderRadius: 12,
-                    padding: 16,
-                  }}
-                >
-                  <h3 style={{ fontWeight: 600, marginBottom: 12 }}>Registration</h3>
+                (() => {
+                  const userPoints = currentUser?.points || 0;
+                  const total = selectedSpace.base_price * form.month_duration;
+                  const maxPointsByOrder = Math.floor(total / 1000);
+                  const maxPointsUsable = Math.min(userPoints, maxPointsByOrder);
+                  const safePointsUsed = Math.min(form.points_used, maxPointsUsable);
+                  const estimatedTotal = total - safePointsUsed * 1000;
+                  const pointsUsed = form.points_used;
 
-                  {/* Start time */}
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={labelStyle}>Start time</label>
-                    <input
-                      type="date"
-                      style={inputStyle}
-                      onChange={(e) => {
-                        setForm((prev) => ({
-                          ...prev,
-                          ['start_time']: e.target.value ? new Date(e.target.value) : undefined,
-                        }));
+                  return (
+                    /* ================= RIGHT: REGISTER ================= */
+                    <div
+                      style={{
+                        border: '1px solid #e5e7eb',
+                        borderRadius: 12,
+                        padding: 16,
                       }}
-                    />
-                  </div>
+                    >
+                      <h3 style={{ fontWeight: 600, marginBottom: 12 }}>Registration</h3>
 
-                  {/* Month month_duration */}
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={labelStyle}>Month</label>
-                    <input
-                      type="number"
-                      min={1}
-                      placeholder="e.g. 1, 3, 6"
-                      style={inputStyle}
-                      defaultValue={1}
-                      onChange={(e) => {
-                        setForm((prev) => ({
-                          ...prev,
-                          ['month_duration']: Number(e.target.value),
-                        }));
-                      }}
-                    />
-                  </div>
+                      <p className="text-xs text-muted-foreground">
+                        You have: <span className="font-semibold">{userPoints}</span> points
+                      </p>
 
-                  {/* Points */}
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={labelStyle}>Points used</label>
-                    <input
-                      type="number"
-                      min={0}
-                      defaultValue={0}
-                      style={inputStyle}
-                      onChange={(e) => {
-                        setForm((prev) => ({
-                          ...prev,
-                          ['points_used']: Number(e.target.value),
-                        }));
-                      }}
-                    />
-                  </div>
+                      {/* Start time */}
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={labelStyle}>Start time</label>
+                        <input
+                          type="datetime-local"
+                          style={inputStyle}
+                          value={
+                            form.start_date
+                              ? new Date(form.start_date).toISOString().slice(0, 16)
+                              : ''
+                          }
+                          onChange={(e) => {
+                            setForm((prev) => ({
+                              ...prev,
+                              start_date: new Date(e.target.value) || undefined,
+                            }));
+                          }}
+                        />
+                      </div>
 
-                  {/* Note */}
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: '#6b7280',
-                      marginBottom: 16,
-                      fontStyle: 'italic',
-                    }}
-                  >
-                    * If start time is not selected, the parking will start from tomorrow.
-                  </div>
+                      {/* Month month_duration */}
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={labelStyle}>Month</label>
+                        <input
+                          type="number"
+                          min={1}
+                          placeholder="e.g. 1, 3, 6"
+                          style={inputStyle}
+                          defaultValue={1}
+                          onChange={(e) => {
+                            setForm((prev) => ({
+                              ...prev,
+                              month_duration: Number(e.target.value),
+                            }));
+                          }}
+                        />
+                      </div>
 
-                  <Button style={{ width: '100%' }} onClick={() => handleSubmit()}>
-                    Register Parking
-                  </Button>
-                </div>
+                      {/* Points */}
+                      <div style={{ marginBottom: 16 }}>
+                        <label style={labelStyle}>Points used</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={maxPointsUsable}
+                          style={inputStyle}
+                          value={form.points_used}
+                          onChange={(e) => {
+                            const value = Number(e.target.value) || 0;
+                            if (value > maxPointsUsable) {
+                              setForm((prev) => ({
+                                ...prev,
+                                points_used: maxPointsUsable,
+                              }));
+                            } else if (value < 0) {
+                              setForm((prev) => ({
+                                ...prev,
+                                points_used: 0,
+                              }));
+                            } else {
+                              setForm((prev) => ({
+                                ...prev,
+                                points_used: Number(e.target.value),
+                              }));
+                            }
+                          }}
+                        />
+                      </div>
+
+                      {pointsUsed > 0 && pointsUsed <= maxPointsUsable && (
+                        <p className="text-xs text-green-600">− {formatVND(pointsUsed * 1000)}</p>
+                      )}
+
+                      {/* Note */}
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: '#6b7280',
+                          marginBottom: 16,
+                          fontStyle: 'italic',
+                        }}
+                      >
+                        * If start time is not selected, the parking will start from tomorrow.
+                      </div>
+
+                      <div className="border-t pt-3 space-y-2 text-sm pb-3">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Subtotal</span>
+                          <span>{formatVND(total)}</span>
+                        </div>
+
+                        {safePointsUsed > 0 && (
+                          <div className="flex justify-between text-red-500">
+                            <span>Membership points</span>
+                            <span>-{formatVND(safePointsUsed * 1000)}</span>
+                          </div>
+                        )}
+
+                        <div className="flex justify-between font-semibold text-base pt-2 border-t">
+                          <span>Estimated total</span>
+                          <span>{formatVND(estimatedTotal)}</span>
+                        </div>
+                      </div>
+
+                      <Button style={{ width: '100%' }} onClick={() => handleSubmit()}>
+                        Continue to Payment
+                      </Button>
+                    </div>
+                  );
+                })()
               )}
+            </div>
+          )}
+
+          {/* STEP 2: PAYMENT */}
+          {step === 2 && createdSubscription && (
+            <div className="space-y-4">
+              {/* Summary */}
+              <div className="border rounded-lg p-4 bg-gray-50 space-y-1 text-sm">
+                <p>
+                  <b>Space:</b> {selectedSpace?.code}
+                </p>
+                <p>
+                  <b>Start:</b> {form.start_date?.toLocaleString('vi-VN')}
+                </p>
+                <p>
+                  <b>Duration:</b> {form.month_duration} months
+                </p>
+                <p>
+                  <b>Total:</b> {formatVND(createdSubscription.finalAmount)}
+                </p>
+              </div>
+
+              {/* Payment Method */}
+              <PaymentMethodSelector
+                amount={createdSubscription.finalAmount}
+                reference_id={createdSubscription.id}
+                reference_type={PaymentReferenceType.PARKING_SUBSCRIPTION}
+                returnUrl={returnUrl}
+              />
             </div>
           )}
         </DialogContent>
@@ -594,10 +738,6 @@ export default function UserParking() {
 
                               if (!available) return;
 
-                              setForm((prev) => ({
-                                ...prev,
-                                base_amount: space.base_price,
-                              }));
                               setSelectedSpace(space);
                             }}
                             style={{

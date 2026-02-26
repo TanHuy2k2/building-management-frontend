@@ -8,8 +8,8 @@ export enum ParkingSubscriptionStatus {
 export interface ParkingSubscription {
   id?: string;
   user_id: string;
-  start_time: Date;
-  end_time: Date;
+  start_date: Date;
+  end_date: Date;
   base_amount: number;
   vat_charge: number;
   discount: number;
@@ -25,8 +25,7 @@ export interface ParkingSubscription {
 
 export interface ParkingSubscriptionForm {
   id?: string;
-  start_time?: Date;
+  start_date?: Date;
   month_duration: number;
-  base_amount: number;
-  points_used?: number;
+  points_used: number;
 }
