@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -31,11 +32,12 @@ import {
   Order,
   OrderDetail,
   OrderStatus,
+  PaymentReferenceType,
   PickupMethod,
   Restaurant,
   UpdateOrderDto,
 } from '../../types';
-import { getRestaurantMenuApi } from '../../services/restaurantService';
+import { getRestaurantByIdApi, getRestaurantMenuApi } from '../../services/restaurantService';
 import toast from 'react-hot-toast';
 import RestaurantSelector from '../manager/restaurant/RestaurantSelector';
 import { formatSnakeCase } from '../../utils/string';
@@ -50,8 +52,12 @@ import {
   getOrderHistoryApi,
   updateOrderByIdApi,
 } from '../../services/restaurantOrderService';
+import { useAuth } from '../../contexts/AuthContext';
+import PaymentMethodSelector from '../PaymentMethod';
 
 export default function UserOrders() {
+  const location = useLocation();
+  const { currentUser } = useAuth();
   const [cart, setCart] = useState<{ [key: string]: number }>({});
   const [showCart, setShowCart] = useState(false);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -83,6 +89,14 @@ export default function UserOrders() {
     contact_phone: '',
     notes: '',
   });
+  const [paymentData, setPaymentData] = useState<{
+    id: string;
+    amount: number;
+    pickupMethod: PickupMethod;
+    deliveryAddress?: string;
+    pointsUsed?: number;
+  } | null>(null);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
   const categories = Array.from(new Set(menuItems.map((item) => item.category)));
   const cartItems = Object.entries(cart).map(([itemId, quantity]) => {
@@ -95,6 +109,12 @@ export default function UserOrders() {
     0,
   );
   const cartCount = Object.values(cart).reduce((sum, count) => sum + count, 0);
+  const userPoints = currentUser?.points || 0;
+  const maxPointsByOrder = Math.floor(total / 1000);
+  const maxPointsUsable = Math.min(userPoints, maxPointsByOrder);
+  const safePointsUsed = Math.min(pointsUsed, maxPointsUsable);
+  const estimatedTotal = total - safePointsUsed * 1000;
+
   const statusMap: Record<
     OrderStatus,
     {
@@ -123,6 +143,13 @@ export default function UserOrders() {
       icon: CheckCircle,
       className: 'bg-green-100 text-green-700 border border-green-300 hover:bg-green-200',
     },
+  };
+
+  const loadRestaurant = async (id: string) => {
+    const res = await getRestaurantByIdApi(id);
+    if (res.success) {
+      setCurrentRestaurant(res.data);
+    }
   };
 
   const loadMenu = async (restaurantId: string) => {
@@ -256,9 +283,17 @@ export default function UserOrders() {
     }
 
     toast.success('Order created successfully');
+    setPaymentData({
+      id: res.data.id,
+      amount: res.data.amount,
+      pickupMethod: payload.pickup_method,
+      deliveryAddress: payload.delivery_address,
+      pointsUsed: payload.points_used,
+    });
+    setShowCreateOrder(false);
+    setShowPaymentDialog(true);
     resetOrderState();
     setCart({});
-    setShowCreateOrder(false);
   };
 
   const handleViewDetails = async (orderId: string, userId: string) => {
@@ -408,7 +443,7 @@ export default function UserOrders() {
                             <span>
                               {item.quantity}x {item.name}
                             </span>
-                            <span>{(item.price * item.quantity).toLocaleString()} VNĐ</span>
+                            <span>{formatVND(item.price * item.quantity)} </span>
                           </div>
                         ))}
                       </div>
@@ -515,9 +550,34 @@ export default function UserOrders() {
     });
   }, [orderDialogMode, editingOrder]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const paymentStatus = params.get('payment');
+    const restaurantId = params.get('restaurantId');
+    if (restaurantId) {
+      loadRestaurant(restaurantId);
+    }
+
+    if (paymentStatus === 'success') {
+      toast.success('Payment successful!');
+      setShowOrderHistory(true);
+      setOrderHistoryTab('today');
+    } else if (paymentStatus === 'failed') {
+      toast.error('Payment failed!');
+    }
+
+    if (paymentStatus) {
+      window.history.replaceState({}, '', location.pathname);
+    }
+  }, [location.search]);
+
   if (!currentRestaurant) {
     return <RestaurantSelector onSelect={setCurrentRestaurant} />;
   }
+
+  const url = new URL(window.location.origin + location.pathname);
+  url.searchParams.set('restaurantId', currentRestaurant.id);
+  const returnUrl = url.toString();
 
   return (
     <div className="space-y-6">
@@ -777,19 +837,29 @@ export default function UserOrders() {
               {orderDialogMode === 'create' && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Use Membership Points</label>
-
+                  <p className="text-xs text-muted-foreground">
+                    You have: <span className="font-semibold">{userPoints}</span> points
+                  </p>
                   <input
                     type="number"
                     min={0}
+                    max={maxPointsUsable}
                     value={pointsUsed}
-                    onChange={(e) => setPointsUsed(Number(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const value = Number(e.target.value) || 0;
+                      if (value > maxPointsUsable) {
+                        setPointsUsed(maxPointsUsable);
+                      } else if (value < 0) {
+                        setPointsUsed(0);
+                      } else {
+                        setPointsUsed(value);
+                      }
+                    }}
                     className="w-full border rounded-md px-3 py-2"
                   />
 
-                  {pointsUsed > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      − {formatVND(pointsUsed * 1000)}
-                    </p>
+                  {pointsUsed > 0 && pointsUsed <= maxPointsUsable && (
+                    <p className="text-xs text-green-600">− {formatVND(pointsUsed * 1000)}</p>
                   )}
                 </div>
               )}
@@ -875,9 +945,10 @@ export default function UserOrders() {
             </div>
 
             {orderDialogMode === 'create' && (
-              <div className="border rounded-md p-3 overflow-y-auto space-y-3 bg-muted/30">
+              <div className="border rounded-md p-3 overflow-y-auto space-y-4 bg-muted/30">
                 <p className="font-medium">Order Details</p>
 
+                {/* Item list */}
                 {cartItems.map(({ item, quantity }) =>
                   item ? (
                     <div key={item.id} className="space-y-2 rounded-md bg-background p-3">
@@ -899,6 +970,26 @@ export default function UserOrders() {
                     </div>
                   ) : null,
                 )}
+
+                {/* Pricing breakdown */}
+                <div className="border-t pt-3 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>{formatVND(total)}</span>
+                  </div>
+
+                  {safePointsUsed > 0 && (
+                    <div className="flex justify-between text-red-500">
+                      <span>Membership points</span>
+                      <span>-{formatVND(safePointsUsed * 1000)}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between font-semibold text-base pt-2 border-t">
+                    <span>Estimated total</span>
+                    <span>{formatVND(estimatedTotal)}</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -926,6 +1017,49 @@ export default function UserOrders() {
               {orderDialogMode === 'create' ? 'Confirm order' : 'Update order'}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm & Pay</DialogTitle>
+            <DialogDescription>Please review your order and complete payment.</DialogDescription>
+          </DialogHeader>
+
+          {paymentData && (
+            <>
+              <div className="space-y-2 text-sm">
+                <p>
+                  <b>Order ID:</b> #{paymentData.id}
+                </p>
+                <p>
+                  <b>Method:</b> {paymentData.pickupMethod}
+                </p>
+                {paymentData.deliveryAddress && (
+                  <p>
+                    <b>Address:</b> {paymentData.deliveryAddress}
+                  </p>
+                )}
+                {paymentData.pointsUsed && (
+                  <p>
+                    <b>Points used:</b> {paymentData.pointsUsed}
+                  </p>
+                )}
+                <p className="font-semibold text-base border-t pt-2">
+                  Total: {formatVND(paymentData.amount)}
+                </p>
+              </div>
+
+              {/* Payment Method */}
+              <PaymentMethodSelector
+                amount={paymentData.amount}
+                reference_id={paymentData.id}
+                reference_type={PaymentReferenceType.ORDER}
+                returnUrl={returnUrl}
+              />
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
