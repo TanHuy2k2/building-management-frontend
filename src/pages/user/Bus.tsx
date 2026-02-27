@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -26,6 +26,7 @@ import {
   BusSeatStatus,
   BusSubscription,
   BusSubscriptionForm,
+  PaymentReferenceType,
 } from '../../types';
 import { getAllBusRouteApi } from '../../services/busRouteService';
 import toast from 'react-hot-toast';
@@ -35,9 +36,12 @@ import RouteMap from '../manager/busRoute/BusRouteMap';
 import { createBusSubscriptionApi, getAllBusSubscriptionApi } from '../../services/busSubscription';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatTimeVN } from '../../utils/time';
+import { useLocation } from 'react-router-dom';
+import PaymentMethodSelector from '../PaymentMethod';
 
 export default function UserBus() {
   const { currentUser } = useAuth();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [routes, setRoutes] = useState<BusRoute[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(routes[0]);
@@ -51,15 +55,18 @@ export default function UserBus() {
   const [form, setForm] = useState<BusSubscriptionForm>({
     route_id: '',
     bus_id: '',
-    start_time: new Date(),
     month_duration: 1,
-    base_amount: 0,
     seat_number: '',
     points_used: 0,
   });
   const [mySubscriptions, setMySubscriptions] = useState<BusSubscription[]>([]);
   const [viewMode, setViewMode] = useState<'routes' | 'myReservations'>('myReservations');
   const [myBusesMap, setMyBusesMap] = useState<Record<string, Bus>>({});
+  const [step, setStep] = useState<1 | 2>(1);
+  const [createdPaymentSubscription, setCreatedPaymentSubscription] = useState<{
+    id: string;
+    finalAmount: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!currentUser?.id) return;
@@ -414,15 +421,8 @@ export default function UserBus() {
 
       toast.success('Subscription created');
 
-      setOpen(false);
-      setForm({
-        route_id: '',
-        bus_id: '',
-        start_time: undefined,
-        month_duration: 1,
-        base_amount: 0,
-        seat_number: '',
-      });
+      setCreatedPaymentSubscription(res.data);
+      setStep(2);
     } catch (err) {
       toast.error('Create failed');
     }
@@ -459,151 +459,277 @@ export default function UserBus() {
     return mySubscriptions.some((sub) => String(sub.route_id) === String(routeId));
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const paymentStatus = params.get('payment');
+    if (paymentStatus === 'success') {
+      toast.success('Payment successful!');
+      setForm({
+        route_id: '',
+        bus_id: '',
+        start_time: undefined,
+        month_duration: 1,
+        seat_number: '',
+        points_used: 0,
+      });
+      setStep(1);
+      setCreatedPaymentSubscription({ id: '', finalAmount: 0 });
+      setViewMode('myReservations');
+    } else if (paymentStatus === 'failed') {
+      toast.error('Payment failed!');
+    }
+
+    if (paymentStatus) {
+      window.history.replaceState({}, '', location.pathname);
+    }
+  }, [location.search]);
+
+  const url = new URL(window.location.origin + location.pathname);
+  const returnUrl = url.toString();
+
+  const pricing = useMemo(() => {
+    if (!selectedRoute) return null;
+
+    const userPoints = currentUser?.points || 0;
+    const total = selectedRoute.base_price * form.month_duration;
+    const maxPointsByOrder = Math.floor(total / 1000);
+    const maxPointsUsable = Math.min(userPoints, maxPointsByOrder);
+    const safePointsUsed = Math.min(form.points_used, maxPointsUsable);
+
+    return {
+      userPoints,
+      total,
+      maxPointsUsable,
+      safePointsUsed,
+      estimatedTotal: total - safePointsUsed * 1000,
+    };
+  }, [selectedRoute, form.month_duration, form.points_used, currentUser]);
+
   return (
     <div className="space-y-6">
       {/* Dialog booking */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl">
+      <Dialog
+        open={open}
+        onOpenChange={() => {
+          setOpen(false);
+          fetchRoutes();
+          setForm({
+            route_id: '',
+            bus_id: '',
+            start_time: undefined,
+            month_duration: 1,
+            seat_number: '',
+            points_used: 0,
+          });
+          setCreatedPaymentSubscription({ id: '', finalAmount: 0 });
+          setStep(1);
+        }}
+      >
+        <DialogContent
+          style={{
+            width: '1000px',
+            maxWidth: '95vw',
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Bus Reservation</DialogTitle>
             <DialogDescription>Select seat and confirm information</DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            {/* ================= LEFT : SEATS ================= */}
-            <div>
-              {selectedBus && (
-                <>
-                  <BusSeatLayout
-                    seats={selectedBus.seats || []}
-                    capacity={selectedBus.capacity}
-                    selectedSeat={selectedSeat}
-                    onSelectSeat={(seat) => {
-                      setSelectedSeat(seat.seat_number);
-                      setForm((prev) => ({
-                        ...prev,
-                        seat_number: String(seat.seat_number),
-                      }));
-                    }}
-                  />
-                  <SeatLegend />
-                </>
+          {/* STEP 1: RESERVATION FORM */}
+          {step === 1 && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+              {/* ================= LEFT : SEATS ================= */}
+              <div className="lg:col-span-1">
+                {selectedBus && (
+                  <>
+                    <BusSeatLayout
+                      seats={selectedBus.seats || []}
+                      capacity={selectedBus.capacity}
+                      selectedSeat={selectedSeat}
+                      onSelectSeat={(seat) => {
+                        setSelectedSeat(seat.seat_number);
+                        setForm((prev) => ({
+                          ...prev,
+                          seat_number: String(seat.seat_number),
+                        }));
+                      }}
+                    />
+                    <SeatLegend />
+                  </>
+                )}
+              </div>
+
+              {/* ================= COLUMN 2: FORM INFO ================= */}
+              <div className="space-y-4">
+                {selectedBus && selectedRoute && pricing && (
+                  <div className="space-y-4">
+                    <p className="text-xs text-muted-foreground">
+                      You have: <span className="font-semibold">{pricing.userPoints}</span> points
+                    </p>
+
+                    <div>
+                      <Label>Route</Label>
+                      <Input disabled value={selectedRoute.route_name} />
+                    </div>
+
+                    <div>
+                      <Label>Departure Time</Label>
+                      <Input
+                        disabled
+                        value={
+                          selectedRoute.departure_time
+                            ? new Date(selectedRoute.departure_time).toLocaleTimeString()
+                            : ''
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Bus</Label>
+                      <Select
+                        value={selectedBusId || ''}
+                        onValueChange={(value: string) => {
+                          setSelectedBusId(value);
+                          setSelectedSeat(null);
+                          setForm((prev) => ({
+                            ...prev,
+                            bus_id: value,
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select bus" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {buses.map((bus) => (
+                            <SelectItem key={bus.id} value={bus.id}>
+                              {bus.type_name} - {bus.plate_number}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Seat Number</Label>
+                      <Input disabled value={selectedSeat || ''} />
+                    </div>
+
+                    <div>
+                      <Label>Start time</Label>
+                      <Input
+                        type="date"
+                        value={form.start_time?.toISOString().slice(0, 10)}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            start_time: new Date(e.target.value),
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Month Duration</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={form.month_duration}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            month_duration: Number(e.target.value),
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Points Used</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={form.points_used}
+                        onChange={(e) => {
+                          const value = Number(e.target.value) || 0;
+                          setForm((prev) => ({
+                            ...prev,
+                            points_used: Math.min(Math.max(value, 0), pricing.maxPointsUsable),
+                          }));
+                        }}
+                      />
+                    </div>
+
+                    {form.points_used > 0 && (
+                      <p className="text-xs text-green-600">
+                        − {formatVND(form.points_used * 1000)}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* ===== COLUMN 3: SUMMARY ===== */}
+              {pricing && (
+                <div className="space-y-3 border rounded-xl p-4 bg-muted/40 sticky top-4 h-fit">
+                  <div className="flex justify-between">
+                    <span>Subtotal</span>
+                    <span>{formatVND(pricing.total)}</span>
+                  </div>
+
+                  <div className="flex justify-between text-red-500">
+                    <span>Membership points</span>
+                    <span>-{formatVND(pricing.safePointsUsed * 1000)}</span>
+                  </div>
+
+                  <div className="flex justify-between font-semibold text-lg border-t pt-2">
+                    <span>Total</span>
+                    <span>{formatVND(pricing.estimatedTotal)}</span>
+                  </div>
+
+                  <Button className="w-full mt-4" onClick={handleSubmit}>
+                    Confirm
+                  </Button>
+                </div>
               )}
             </div>
+          )}
 
-            {/* ================= RIGHT : INFO FORM ================= */}
+          {/* STEP 2: PAYMENT */}
+          {step === 2 && createdPaymentSubscription && selectedBus && selectedRoute && (
             <div className="space-y-4">
-              <div>
-                <Label>Route</Label>
-                <Input disabled value={selectedRoute?.route_name || ''} />
+              {/* Summary */}
+              <div className="border rounded-lg p-4 bg-gray-50 space-y-1 text-sm">
+                <p>
+                  <b>Route:</b> {selectedRoute.route_name}
+                </p>
+                <p>
+                  <b>Bus plate:</b> {selectedBus.plate_number}
+                </p>
+                <p>
+                  <b>Seat:</b> {form.seat_number}
+                </p>
+                <p>
+                  <b>Start:</b> {form.start_time?.toLocaleString('vi-VN')}
+                </p>
+                <p>
+                  <b>Duration:</b> {form.month_duration} months
+                </p>
+                <p>
+                  <b>Total:</b> {formatVND(createdPaymentSubscription.finalAmount)}
+                </p>
               </div>
 
-              <div>
-                <Label>Departure Time</Label>
-                <Input
-                  disabled
-                  value={
-                    selectedRoute?.departure_time
-                      ? new Date(selectedRoute.departure_time).toLocaleTimeString()
-                      : ''
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Bus</Label>
-                <Select
-                  value={selectedBusId || ''}
-                  onValueChange={(value: string) => {
-                    setSelectedBusId(value);
-                    setSelectedSeat(null);
-                    setForm((prev) => ({
-                      ...prev,
-                      bus_id: value,
-                    }));
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select bus" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {buses.map((bus) => (
-                      <SelectItem key={bus.id} value={bus.id}>
-                        {bus.type_name} - {bus.plate_number}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Seat Number</Label>
-                <Input
-                  disabled
-                  type="number"
-                  min={0}
-                  value={selectedSeat ? String(selectedSeat) : 0}
-                />
-              </div>
-
-              {/* Start time */}
-              <div>
-                <Label>Start time</Label>
-                <Input
-                  type="date"
-                  value={form.start_time?.toISOString().slice(0, 10)}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      start_time: new Date(e.target.value),
-                    }))
-                  }
-                />
-              </div>
-
-              {/* Month month_duration */}
-              <div>
-                <Label>Month Duration</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  placeholder="e.g. 1, 3, 6"
-                  value={form.month_duration || ''}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      month_duration: Number(e.target.value),
-                      base_amount: form.base_amount * Number(e.target.value),
-                    }))
-                  }
-                />
-              </div>
-
-              <div>
-                <Label>Points Used</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.points_used}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      points_used: Number(e.target.value),
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" onClick={handleSubmit}>
-                  Confirm
-                </Button>
-              </div>
+              {/* Payment Method */}
+              <PaymentMethodSelector
+                amount={createdPaymentSubscription.finalAmount}
+                reference_id={createdPaymentSubscription.id}
+                reference_type={PaymentReferenceType.BUS_SUBSCRIPTION}
+                returnUrl={returnUrl}
+              />
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
       {/* Dialog detail */}
