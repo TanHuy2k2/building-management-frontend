@@ -268,6 +268,8 @@ export default function UserOrders() {
   });
 
   const handleCreateOrder = async () => {
+    if (loading) return;
+
     const payload = removeEmptyFields(buildCreateOrderDto());
     if (!payload.order_details.length) {
       toast.error('Cart is empty');
@@ -275,25 +277,32 @@ export default function UserOrders() {
       return;
     }
 
-    const res = await createOrderApi(currentRestaurant!.id, payload);
-    if (!res.success) {
-      toast.error(res.message);
+    try {
+      setLoading(true);
 
-      return;
+      const res = await createOrderApi(currentRestaurant!.id, payload);
+      if (!res.success) {
+        toast.error(res.message);
+
+        return;
+      }
+
+      toast.success('Order created successfully');
+      setPaymentData({
+        id: res.data.id,
+        amount: res.data.amount,
+        pickupMethod: payload.pickup_method,
+        deliveryAddress: payload.delivery_address,
+        pointsUsed: payload.points_used,
+      });
+
+      setShowCreateOrder(false);
+      setShowPaymentDialog(true);
+      resetOrderState();
+      setCart({});
+    } finally {
+      setLoading(false);
     }
-
-    toast.success('Order created successfully');
-    setPaymentData({
-      id: res.data.id,
-      amount: res.data.amount,
-      pickupMethod: payload.pickup_method,
-      deliveryAddress: payload.delivery_address,
-      pointsUsed: payload.points_used,
-    });
-    setShowCreateOrder(false);
-    setShowPaymentDialog(true);
-    resetOrderState();
-    setCart({});
   };
 
   const handleViewDetails = async (orderId: string, userId: string) => {
@@ -325,6 +334,8 @@ export default function UserOrders() {
   };
 
   const handleUpdateOrder = async () => {
+    if (loading) return;
+
     if (!currentRestaurant || !editingOrder || !originalOrder) return;
 
     try {

@@ -23,14 +23,18 @@ export async function createPaymentApi(data: PaymentForm): Promise<ResponseInter
 export async function createMomoPaymentApi(data: PaymentUrlForm): Promise<ResponseInterface> {
   try {
     const accessToken = await getAccessToken();
-    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.CREATE_MOMO_PAYMENT, {
-      method: 'POST',
-      body: JSON.stringify(data),
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
+    const response: ResponseInterface = await apiRequest(
+      API_ENDPOINTS.CREATE_MOMO_PAYMENT,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
       },
-    }, true);
+      true,
+    );
 
     return response;
   } catch (error: any) {
@@ -41,14 +45,18 @@ export async function createMomoPaymentApi(data: PaymentUrlForm): Promise<Respon
 export async function createVnpayPaymentApi(data: PaymentUrlForm): Promise<ResponseInterface> {
   try {
     const accessToken = await getAccessToken();
-    const response: ResponseInterface = await apiRequest(API_ENDPOINTS.CREATE_VNPAY_PAYMENT, {
-      method: 'POST',
-      body: JSON.stringify(data),
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
+    const response: ResponseInterface = await apiRequest(
+      API_ENDPOINTS.CREATE_VNPAY_PAYMENT,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
       },
-    });
+      true,
+    );
 
     return response;
   } catch (error: any) {

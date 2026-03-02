@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '../components/ui/button';
 import { Label } from '../components/ui/label';
 import { Wallet, Banknote } from 'lucide-react';
-import { PaymentForm, PaymentMethod, PaymentReferenceType, PaymentServiceProvider } from '../types';
+import { PaymentForm, PaymentMethod, PaymentReferenceType, PaymentServiceProvider, ResponseInterface } from '../types';
 import { Card } from '../components/ui/card';
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
 import {
@@ -51,7 +51,7 @@ export default function PaymentMethodSelector({
       }
 
       if (form.method === PaymentMethod.WALLET) {
-        let payRes;
+        let payRes: ResponseInterface;
         switch (provider) {
           case PaymentServiceProvider.MOMO:
             payRes = await createMomoPaymentApi({

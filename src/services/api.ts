@@ -5,7 +5,7 @@ export async function apiRequest<T>(
   options?: RequestInit,
   payment = false,
 ): Promise<T> {
-  let response;
+  let response: Response;
   if (payment) {
     response = await fetch(`${ENV.BE_URL}${endpoint}`, {
       ...options,
