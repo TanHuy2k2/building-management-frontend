@@ -10,6 +10,9 @@ export const POINT_VALUE = 1000;
 export const MAX_SHOWN_IMAGE_NAMES = 3;
 export const HTTP_PREFIX = 'http';
 export const BUS_SPEED_KMH = 25;
+// payment constants
+export const POINTS_EARN_RATE = 20000;
+export const POINT_EXCHANGE_VALUE = 1000;
 export const ENV = {
   BE_URL: process.env.BE_URL ?? '',
   BE_API_URL: process.env.BE_API_URL ?? '',

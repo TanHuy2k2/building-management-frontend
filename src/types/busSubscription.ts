@@ -1,3 +1,4 @@
+import { PaymentStatus } from './payment';
 import { OrderDirection } from './restaurant';
 
 export enum BusSubscriptionStatus {
@@ -16,6 +17,9 @@ export interface BusSubscription {
   end_time: Date;
   status: BusSubscriptionStatus;
   payment_id: string;
+  payment_status: PaymentStatus;
+  points_used: number;
+  total_amount: number;
   seat_number: string;
   notes?: string;
   created_at: Date;
