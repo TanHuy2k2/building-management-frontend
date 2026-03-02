@@ -24,6 +24,15 @@ export const durationHours = (start: Date | string, end: Date | string) => {
   return Math.round((diff / (1000 * 60 * 60)) * 100) / 100;
 };
 
+export const calcMonthDuration = (start: Date, end: Date) => {
+  const s = new Date(start);
+  const e = new Date(end);
+  const diffMs = e.getTime() - s.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+  return Math.max(1, Math.round(diffDays / 30));
+};
+
 export const getNextDay = (day: DayOfWeek) => {
   const idx = DAY_ORDER.indexOf(day);
   if (idx === -1 || idx === DAY_ORDER.length - 1) return null;

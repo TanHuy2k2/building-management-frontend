@@ -27,15 +27,17 @@ import {
   BusSubscription,
   BusSubscriptionForm,
   PaymentReferenceType,
+  PaymentStatus,
+  VATRate,
 } from '../../types';
 import { getAllBusRouteApi } from '../../services/busRouteService';
 import toast from 'react-hot-toast';
-import { formatVND } from '../../utils/currency';
+import { calculatePayment, formatVND } from '../../utils/currency';
 import { getBusByIdApi } from '../../services/busService';
 import RouteMap from '../manager/busRoute/BusRouteMap';
 import { createBusSubscriptionApi, getAllBusSubscriptionApi } from '../../services/busSubscription';
 import { useAuth } from '../../contexts/AuthContext';
-import { formatTimeVN } from '../../utils/time';
+import { calcMonthDuration, durationHours, formatTimeVN } from '../../utils/time';
 import { useLocation } from 'react-router-dom';
 import PaymentMethodSelector from '../PaymentMethod';
 
@@ -47,6 +49,7 @@ export default function UserBus() {
   const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(routes[0]);
   const [buses, setBuses] = useState<Bus[]>([]);
   const [selectedBusId, setSelectedBusId] = useState<string>('');
+  const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
@@ -67,6 +70,7 @@ export default function UserBus() {
     id: string;
     finalAmount: number;
   } | null>(null);
+  const [selectedPendingSub, setSelectedPendingSub] = useState<BusSubscription | null>(null);
 
   useEffect(() => {
     if (!currentUser?.id) return;
@@ -119,6 +123,7 @@ export default function UserBus() {
 
     if (busList.length) {
       setSelectedBusId(busList[0].id);
+      setSelectedBus(busList[0]);
     }
   };
 
@@ -402,8 +407,6 @@ export default function UserBus() {
     </div>
   );
 
-  const selectedBus = buses.find((b) => b.id === selectedBusId);
-
   const handleSubmit = async () => {
     if (!form.route_id || !form.bus_id || !form.seat_number || !form.start_time) {
       toast.error('Please fill all required fields');
@@ -491,19 +494,40 @@ export default function UserBus() {
     if (!selectedRoute) return null;
 
     const userPoints = currentUser?.points || 0;
-    const total = selectedRoute.base_price * form.month_duration;
-    const maxPointsByOrder = Math.floor(total / 1000);
-    const maxPointsUsable = Math.min(userPoints, maxPointsByOrder);
-    const safePointsUsed = Math.min(form.points_used, maxPointsUsable);
+    const amount = selectedRoute.base_price * form.month_duration;
+    const { finalAmount, discount, pointsEarned, maxPointsUsed, finalPointsUsed, vatCharge } =
+      calculatePayment(amount, currentUser?.rank, form.points_used, VATRate.DEFAULT);
 
     return {
+      amount,
       userPoints,
-      total,
-      maxPointsUsable,
-      safePointsUsed,
-      estimatedTotal: total - safePointsUsed * 1000,
+      finalAmount,
+      discount,
+      vatCharge,
+      pointsEarned,
+      maxPointsUsed,
+      finalPointsUsed,
     };
   }, [selectedRoute, form.month_duration, form.points_used, currentUser]);
+
+  const paymentStatusConfig: Record<string, { label: string; className: string }> = {
+    pending: {
+      label: 'Pending',
+      className: 'bg-yellow-50 text-yellow-600',
+    },
+    success: {
+      label: 'Paid',
+      className: 'bg-green-100 text-green-700',
+    },
+    failed: {
+      label: 'Failed',
+      className: 'bg-red-100 text-red-700',
+    },
+    refunded: {
+      label: 'Refunded',
+      className: 'bg-gray-100 text-gray-700',
+    },
+  };
 
   return (
     <div className="space-y-6">
@@ -512,7 +536,6 @@ export default function UserBus() {
         open={open}
         onOpenChange={() => {
           setOpen(false);
-          fetchRoutes();
           setForm({
             route_id: '',
             bus_id: '',
@@ -521,8 +544,9 @@ export default function UserBus() {
             seat_number: '',
             points_used: 0,
           });
-          setCreatedPaymentSubscription({ id: '', finalAmount: 0 });
           setStep(1);
+
+          fetchMySubscriptions();
         }}
       >
         <DialogContent
@@ -591,6 +615,7 @@ export default function UserBus() {
                         value={selectedBusId || ''}
                         onValueChange={(value: string) => {
                           setSelectedBusId(value);
+                          setSelectedBus(myBusesMap[value]);
                           setSelectedSeat(null);
                           setForm((prev) => ({
                             ...prev,
@@ -620,7 +645,7 @@ export default function UserBus() {
                       <Label>Start time</Label>
                       <Input
                         type="date"
-                        value={form.start_time?.toISOString().slice(0, 10)}
+                        value={form.start_time ? form.start_time.toISOString().slice(0, 10) : ''}
                         onChange={(e) =>
                           setForm((prev) => ({
                             ...prev,
@@ -635,7 +660,7 @@ export default function UserBus() {
                       <Input
                         type="number"
                         min={1}
-                        value={form.month_duration}
+                        value={form.month_duration ?? 1}
                         onChange={(e) =>
                           setForm((prev) => ({
                             ...prev,
@@ -650,12 +675,12 @@ export default function UserBus() {
                       <Input
                         type="number"
                         min={0}
-                        value={form.points_used}
+                        value={form.points_used ?? 0}
                         onChange={(e) => {
                           const value = Number(e.target.value) || 0;
                           setForm((prev) => ({
                             ...prev,
-                            points_used: Math.min(Math.max(value, 0), pricing.maxPointsUsable),
+                            points_used: Math.min(Math.max(value, 0), pricing.maxPointsUsed),
                           }));
                         }}
                       />
@@ -675,17 +700,32 @@ export default function UserBus() {
                 <div className="space-y-3 border rounded-xl p-4 bg-muted/40 sticky top-4 h-fit">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>{formatVND(pricing.total)}</span>
+                    <span>{formatVND(pricing.amount)}</span>
+                  </div>
+
+                  <div className="flex justify-between text-red-500">
+                    <span>Ranks discount</span>
+                    <span>-{formatVND(pricing.discount)}</span>
                   </div>
 
                   <div className="flex justify-between text-red-500">
                     <span>Membership points</span>
-                    <span>-{formatVND(pricing.safePointsUsed * 1000)}</span>
+                    <span>-{formatVND(pricing.finalPointsUsed * 1000)}</span>
+                  </div>
+
+                  <div className="flex justify-between text-red-500">
+                    <span>VAT</span>
+                    <span>+{formatVND(pricing.vatCharge)}</span>
                   </div>
 
                   <div className="flex justify-between font-semibold text-lg border-t pt-2">
                     <span>Total</span>
-                    <span>{formatVND(pricing.estimatedTotal)}</span>
+                    <span>{formatVND(pricing.finalAmount)}</span>
+                  </div>
+
+                  <div className="flex justify-between font-semibold text-lg border-t pt-2">
+                    <span>Points earned</span>
+                    <span>{pricing.pointsEarned}</span>
                   </div>
 
                   <Button className="w-full mt-4" onClick={handleSubmit}>
@@ -715,9 +755,6 @@ export default function UserBus() {
                 </p>
                 <p>
                   <b>Duration:</b> {form.month_duration} months
-                </p>
-                <p>
-                  <b>Total:</b> {formatVND(createdPaymentSubscription.finalAmount)}
                 </p>
               </div>
 
@@ -869,125 +906,138 @@ export default function UserBus() {
       </div>
 
       {/* Routes */}
-      {viewMode === 'routes' && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Routes</h2>
-          {loading ? (
-            <p>Loading routes...</p>
-          ) : (
-            routes.map((route) => {
-              const startStop = route.stops?.[0];
-              const endStop = route.stops?.[route.stops.length - 1];
+      {viewMode === 'routes' &&
+        (() => {
+          const sortedRoutes = [...routes].sort((a, b) => {
+            const aReserved = isReservedRoute(a.id);
+            const bReserved = isReservedRoute(b.id);
 
-              return (
-                <Card key={route.id} className="relative">
-                  {/* Info */}
-                  <button
-                    onClick={async () => {
-                      setSelectedRoute(route);
-                      setOpenDetail(true);
+            return Number(aReserved) - Number(bReserved);
+          });
+          return (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold">Routes</h2>
+              {loading ? (
+                <p>Loading routes...</p>
+              ) : (
+                sortedRoutes.map((route) => {
+                  const startStop = route.stops?.[0];
+                  const endStop = route.stops?.[route.stops.length - 1];
 
-                      if (!route.bus_id?.length) return;
+                  return (
+                    <Card key={route.id} className="relative">
+                      {/* Info */}
+                      <button
+                        onClick={async () => {
+                          setSelectedRoute(route);
+                          setOpenDetail(true);
 
-                      const results = await Promise.all(
-                        route.bus_id.map((id) => getBusByIdApi(id)),
-                      );
-                      const busList = results.filter((r) => r.success).map((r) => r.data);
-                      setDetailBuses(busList);
+                          if (!route.bus_id?.length) return;
 
-                      if (busList.length) setDetailBusId(busList[0].id);
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: 12,
-                      right: 12,
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: 4,
-                    }}
-                    title="View detail"
-                  >
-                    <Info size={20} color="#6b7280" />
-                  </button>
+                          const results = await Promise.all(
+                            route.bus_id.map((id) => getBusByIdApi(id)),
+                          );
+                          const busList = results.filter((r) => r.success).map((r) => r.data);
+                          setDetailBuses(busList);
 
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      {route.route_name}
-                      {isReservedRoute(route.id) && (
-                        <Badge className="bg-green-100 text-green-700 border-green-300">
-                          <CheckCircle size={14} />
-                          You
-                        </Badge>
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <div className="flex items-start gap-2">
-                          <MapPin className="size-4 text-green-600 mt-1 flex-shrink-0" />
-                          <div>
-                            <p className="text-sm font-medium">Start Point</p>
-                            <p className="text-sm text-muted-foreground">{startStop?.stop_name}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <MapPin className="size-4 text-red-600 mt-1 flex-shrink-0" />
-                          <div>
-                            <p className="text-sm font-medium">End Point</p>
-                            <p className="text-sm text-muted-foreground">{endStop?.stop_name}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Clock className="size-4 text-muted-foreground" />
-                          <span className="text-sm">{route.estimated_duration} minutes</span>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-lg">
-                            {formatVND(route.base_price)}/month
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-medium mb-2">Stops:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {route.stops?.map((stop) => (
-                          <Badge key={stop.stop_id} variant="outline">
-                            {stop.order}. {stop.stop_name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <Button
-                        disabled={isReservedRoute(route.id)}
-                        onClick={() => {
-                          setOpen(true);
-                          handleBookNow(route);
+                          if (busList.length) setDetailBusId(busList[0].id);
                         }}
-                        className={
-                          isReservedRoute(route.id)
-                            ? 'bg-green-600 hover:bg-green-600 text-white cursor-default'
-                            : ''
-                        }
+                        style={{
+                          position: 'absolute',
+                          top: 12,
+                          right: 12,
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: 4,
+                        }}
+                        title="View detail"
                       >
-                        {isReservedRoute(route.id) ? 'Reserved' : 'Book Now'}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
-        </div>
-      )}
+                        <Info size={20} color="#6b7280" />
+                      </button>
+
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          {route.route_name}
+                          {isReservedRoute(route.id) && (
+                            <Badge className="bg-green-100 text-green-700 border-green-300">
+                              <CheckCircle size={14} />
+                              You
+                            </Badge>
+                          )}
+                        </CardTitle>
+                      </CardHeader>
+
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <div className="flex items-start gap-2">
+                              <MapPin className="size-4 text-green-600 mt-1 flex-shrink-0" />
+                              <div>
+                                <p className="text-sm font-medium">Start Point</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {startStop?.stop_name}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <MapPin className="size-4 text-red-600 mt-1 flex-shrink-0" />
+                              <div>
+                                <p className="text-sm font-medium">End Point</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {endStop?.stop_name}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Clock className="size-4 text-muted-foreground" />
+                              <span className="text-sm">{route.estimated_duration} minutes</span>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-lg">
+                                {formatVND(route.base_price)}/month
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-sm font-medium mb-2">Stops:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {route.stops?.map((stop) => (
+                              <Badge key={stop.stop_id} variant="outline">
+                                {stop.order}. {stop.stop_name}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <Button
+                            disabled={isReservedRoute(route.id)}
+                            onClick={() => {
+                              setOpen(true);
+                              handleBookNow(route);
+                            }}
+                            className={
+                              isReservedRoute(route.id)
+                                ? 'bg-green-600 hover:bg-green-600 text-white cursor-default'
+                                : ''
+                            }
+                          >
+                            {isReservedRoute(route.id) ? 'Reserved' : 'Book Now'}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
+            </div>
+          );
+        })()}
 
       {viewMode === 'myReservations' && (
         <div className="space-y-4">
@@ -999,6 +1049,8 @@ export default function UserBus() {
               const bus = myBusesMap[sub.bus_id];
 
               if (!route || !bus) return null;
+
+              const status = paymentStatusConfig[sub.payment_status];
 
               return (
                 <Card
@@ -1017,7 +1069,7 @@ export default function UserBus() {
                         </div>
                       </div>
 
-                      <Badge className="bg-green-100 text-green-700">Active</Badge>
+                      <Badge className={status.className}>{status.label}</Badge>
                     </div>
 
                     {/* Info */}
@@ -1062,6 +1114,43 @@ export default function UserBus() {
                         </div>
                       </div>
                     </div>
+
+                    {sub.payment_status === PaymentStatus.PENDING && (
+                      <>
+                        <p className="text-sm text-yellow-600 mt-3">
+                          You haven't paid for this invoice yet.
+                        </p>
+                        <div className="pt-1 flex justify-end">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPendingSub(sub);
+                              setSelectedRoute(route);
+                              setSelectedBus(bus);
+
+                              setForm({
+                                route_id: sub.route_id,
+                                bus_id: sub.bus_id,
+                                seat_number: sub.seat_number,
+                                start_time: new Date(sub.start_time),
+                                month_duration: calcMonthDuration(sub.start_time, sub.end_time),
+                                points_used: sub.points_used || 0,
+                              });
+
+                              setCreatedPaymentSubscription({
+                                id: sub.id,
+                                finalAmount: sub.total_amount,
+                              });
+
+                              setOpen(true);
+                              setStep(2);
+                            }}
+                          >
+                            Pay Now
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               );

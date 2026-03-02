@@ -33,3 +33,8 @@ export interface PaymentUrlForm {
   amount: number;
   return_url: string;
 }
+
+export enum VATRate {
+  FOOD = 10,
+  DEFAULT = 5,
+}
