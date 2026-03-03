@@ -497,6 +497,7 @@ export default function UserBus() {
     const amount = selectedRoute.base_price * form.month_duration;
     const { finalAmount, discount, pointsEarned, maxPointsUsed, finalPointsUsed, vatCharge } =
       calculatePayment(amount, currentUser?.rank, form.points_used, VATRate.DEFAULT);
+    const maxPointsUsable = Math.min(userPoints, maxPointsUsed);
 
     return {
       amount,
@@ -505,8 +506,8 @@ export default function UserBus() {
       discount,
       vatCharge,
       pointsEarned,
-      maxPointsUsed,
       finalPointsUsed,
+      maxPointsUsable,
     };
   }, [selectedRoute, form.month_duration, form.points_used, currentUser]);
 
@@ -675,12 +676,13 @@ export default function UserBus() {
                       <Input
                         type="number"
                         min={0}
+                        max={pricing.maxPointsUsable}
                         value={form.points_used ?? 0}
                         onChange={(e) => {
                           const value = Number(e.target.value) || 0;
                           setForm((prev) => ({
                             ...prev,
-                            points_used: Math.min(Math.max(value, 0), pricing.maxPointsUsed),
+                            points_used: Math.min(Math.max(value, 0), pricing.maxPointsUsable),
                           }));
                         }}
                       />

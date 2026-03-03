@@ -28,20 +28,23 @@ import {
 } from '../../components/ui/dialog';
 import {
   CreateOrderDto,
+  DeliveryAddress,
   MenuItem,
   Order,
   OrderDetail,
   OrderStatus,
   PaymentReferenceType,
+  PaymentStatus,
   PickupMethod,
   Restaurant,
   UpdateOrderDto,
+  VATRate,
 } from '../../types';
 import { getRestaurantByIdApi, getRestaurantMenuApi } from '../../services/restaurantService';
 import toast from 'react-hot-toast';
 import RestaurantSelector from '../manager/restaurant/RestaurantSelector';
 import { formatSnakeCase } from '../../utils/string';
-import { formatVND } from '../../utils/currency';
+import { calculatePayment, formatVND } from '../../utils/currency';
 import { DEFAULT_FOOD_IMG_URL, POINT_VALUE } from '../../utils/constants';
 import { resolveImageUrl } from '../../utils/image';
 import { getChangedFields, removeEmptyFields } from '../../utils/updateFields';
@@ -54,6 +57,7 @@ import {
 } from '../../services/restaurantOrderService';
 import { useAuth } from '../../contexts/AuthContext';
 import PaymentMethodSelector from '../PaymentMethod';
+import { getRankDetails } from '../../utils/rank';
 
 export default function UserOrders() {
   const location = useLocation();
@@ -75,6 +79,7 @@ export default function UserOrders() {
   const [orderDetails, setOrderDetails] = useState<OrderDetail[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [orderDialogMode, setOrderDialogMode] = useState<'create' | 'update'>('create');
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
@@ -93,8 +98,8 @@ export default function UserOrders() {
     id: string;
     amount: number;
     pickupMethod: PickupMethod;
-    deliveryAddress?: string;
-    pointsUsed?: number;
+    deliveryAddress?: DeliveryAddress;
+    pointsUsed: number;
   } | null>(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
@@ -109,11 +114,10 @@ export default function UserOrders() {
     0,
   );
   const cartCount = Object.values(cart).reduce((sum, count) => sum + count, 0);
-  const userPoints = currentUser?.points || 0;
-  const maxPointsByOrder = Math.floor(total / 1000);
-  const maxPointsUsable = Math.min(userPoints, maxPointsByOrder);
-  const safePointsUsed = Math.min(pointsUsed, maxPointsUsable);
-  const estimatedTotal = total - safePointsUsed * 1000;
+  const userPoints = currentUser?.points ?? 0;
+  const { finalAmount, discount, pointsEarned, maxPointsUsed, finalPointsUsed, vatCharge } =
+    calculatePayment(total, currentUser?.rank, pointsUsed, VATRate.FOOD);
+  const maxPointsUsable = Math.min(userPoints, maxPointsUsed);
 
   const statusMap: Record<
     OrderStatus,
@@ -369,6 +373,20 @@ export default function UserOrders() {
     }
   };
 
+  const handlePayNow = (order: Order) => {
+    if (payingOrderId) return;
+
+    setPayingOrderId(order.id);
+    setPaymentData({
+      id: order.id,
+      amount: order.total_amount,
+      pickupMethod: order.pickup_method,
+      deliveryAddress: order.delivery_address,
+      pointsUsed: order.points_used,
+    });
+    setShowPaymentDialog(true);
+  };
+
   const getStatusBadge = (status: OrderStatus) => {
     const cfg = statusMap[status];
     const Icon = cfg.icon;
@@ -398,9 +416,12 @@ export default function UserOrders() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {orders.map((order) => {
           const discountAmount = (order.discount || 0) + (order.points_used || 0) * POINT_VALUE;
+          const paymentStatus = order.payment_status ?? 'UNPAID';
+          const isPaid = paymentStatus === PaymentStatus.SUCCESS;
+          const isPaying = payingOrderId === order.id;
 
           return (
-            <Card key={order.id}>
+            <Card key={order.id} className="relative">
               <CardHeader className="pb-1">
                 <div className="flex justify-between items-center">
                   <div>
@@ -441,7 +462,7 @@ export default function UserOrders() {
                 </div>
               </CardHeader>
 
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-2 pb-16">
                 {expandedOrderId === order.id && (
                   <>
                     {loadingDetails ? (
@@ -461,7 +482,6 @@ export default function UserOrders() {
                     )}
                   </>
                 )}
-
                 {/* ===== PAYMENT SUMMARY ===== */}
                 <div className="border-t pt-3 space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -486,38 +506,56 @@ export default function UserOrders() {
                     <span>{order.total_amount.toLocaleString()} VNĐ</span>
                   </div>
                 </div>
-
                 {/* ===== PICKUP / DELIVERY INFO ===== */}
-                <div className="border-t pt-3 text-sm space-y-1">
-                  <p>
-                    <span className="text-muted-foreground">Method:</span>{' '}
-                    <span className="font-medium capitalize">
-                      {order.pickup_method.replace('_', ' ')}
-                    </span>
-                  </p>
-
-                  {order.pickup_method === PickupMethod.DELIVERY && order.delivery_address && (
-                    <p>
-                      <span className="text-muted-foreground">Address:</span>{' '}
-                      {[
-                        order.delivery_address.building,
-                        order.delivery_address.floor && `Floor ${order.delivery_address.floor}`,
-                        order.delivery_address.room && `Room ${order.delivery_address.room}`,
-                      ]
-                        .filter(Boolean)
-                        .join(', ')}
-                    </p>
-                  )}
-
-                  {order.pickup_method === PickupMethod.DELIVERY &&
-                    order.delivery_info?.contact_name && (
+                <div className="border-t pt-3 text-sm space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
                       <p>
-                        <span className="text-muted-foreground">Receiver:</span>{' '}
-                        {order.delivery_info.contact_name}
-                        {order.delivery_info.contact_phone &&
-                          ` • ${order.delivery_info.contact_phone}`}
+                        <span className="text-muted-foreground">Method:</span>{' '}
+                        <span className="font-medium capitalize">
+                          {order.pickup_method.replace('_', ' ')}
+                        </span>
                       </p>
-                    )}
+
+                      {order.pickup_method === PickupMethod.DELIVERY && order.delivery_address && (
+                        <p className="mt-1">
+                          <span className="text-muted-foreground">Address:</span>{' '}
+                          {[
+                            order.delivery_address.building,
+                            order.delivery_address.floor && `Floor ${order.delivery_address.floor}`,
+                            order.delivery_address.room && `Room ${order.delivery_address.room}`,
+                          ]
+                            .filter(Boolean)
+                            .join(', ')}
+                        </p>
+                      )}
+
+                      {order.pickup_method === PickupMethod.DELIVERY &&
+                        order.delivery_info?.contact_name && (
+                          <p className="mt-1">
+                            <span className="text-muted-foreground">Receiver:</span>{' '}
+                            {order.delivery_info.contact_name}
+                            {order.delivery_info.contact_phone &&
+                              ` • ${order.delivery_info.contact_phone}`}
+                          </p>
+                        )}
+                    </div>
+
+                    <div className="flex items-center">
+                      {isPaid ? (
+                        <Button
+                          size="sm"
+                          className="bg-green-100 text-green-600 hover:bg-green-100"
+                        >
+                          Paid
+                        </Button>
+                      ) : (
+                        <Button size="sm" disabled={isPaying} onClick={() => handlePayNow(order)}>
+                          {isPaying ? 'Processing...' : 'Pay Now'}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -869,8 +907,8 @@ export default function UserOrders() {
                     className="w-full border rounded-md px-3 py-2"
                   />
 
-                  {pointsUsed > 0 && pointsUsed <= maxPointsUsable && (
-                    <p className="text-xs text-green-600">− {formatVND(pointsUsed * 1000)}</p>
+                  {finalPointsUsed > 0 && (
+                    <p className="text-xs text-green-600">− {formatVND(finalPointsUsed * 1000)}</p>
                   )}
                 </div>
               )}
@@ -984,21 +1022,46 @@ export default function UserOrders() {
 
                 {/* Pricing breakdown */}
                 <div className="border-t pt-3 space-y-2 text-sm">
+                  {/* Subtotal */}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span>{formatVND(total)}</span>
                   </div>
 
-                  {safePointsUsed > 0 && (
-                    <div className="flex justify-between text-red-500">
-                      <span>Membership points</span>
-                      <span>-{formatVND(safePointsUsed * 1000)}</span>
+                  {/* Rank discount */}
+                  {discount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Rank discount</span>
+                      <span>-{formatVND(discount)}</span>
                     </div>
                   )}
 
+                  {/* Membership points */}
+                  {finalPointsUsed > 0 && (
+                    <div className="flex justify-between text-red-500">
+                      <span>Membership points</span>
+                      <span>-{formatVND(finalPointsUsed * POINT_VALUE)}</span>
+                    </div>
+                  )}
+
+                  {/* VAT */}
+                  {vatCharge > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">VAT</span>
+                      <span>{formatVND(vatCharge)}</span>
+                    </div>
+                  )}
+
+                  {/* Final total */}
                   <div className="flex justify-between font-semibold text-base pt-2 border-t">
                     <span>Estimated total</span>
-                    <span>{formatVND(estimatedTotal)}</span>
+                    <span>{formatVND(finalAmount)}</span>
+                  </div>
+
+                  {/* Points earned */}
+                  <div className="flex justify-between text-xs text-muted-foreground pt-1">
+                    <span>Points earned</span>
+                    <span>+{pointsEarned}</span>
                   </div>
                 </div>
               </div>
@@ -1031,7 +1094,17 @@ export default function UserOrders() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+      {/* Order Payment Dialog */}
+      <Dialog
+        open={showPaymentDialog}
+        onOpenChange={(open) => {
+          setShowPaymentDialog(open);
+          if (!open) {
+            setPaymentData(null);
+            setPayingOrderId(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Confirm & Pay</DialogTitle>
@@ -1047,19 +1120,26 @@ export default function UserOrders() {
                 <p>
                   <b>Method:</b> {paymentData.pickupMethod}
                 </p>
-                {paymentData.deliveryAddress && (
-                  <p>
-                    <b>Address:</b> {paymentData.deliveryAddress}
-                  </p>
-                )}
-                {paymentData.pointsUsed && (
+                {paymentData.pickupMethod === PickupMethod.DELIVERY &&
+                  paymentData.deliveryAddress && (
+                    <p className="mt-1">
+                      <b>Address: </b>
+                      {[
+                        paymentData.deliveryAddress.building,
+                        paymentData.deliveryAddress.floor &&
+                          `Floor ${paymentData.deliveryAddress.floor}`,
+                        paymentData.deliveryAddress.room &&
+                          `Room ${paymentData.deliveryAddress.room}`,
+                      ]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </p>
+                  )}
+                {paymentData.pointsUsed > 0 && (
                   <p>
                     <b>Points used:</b> {paymentData.pointsUsed}
                   </p>
                 )}
-                <p className="font-semibold text-base border-t pt-2">
-                  Total: {formatVND(paymentData.amount)}
-                </p>
               </div>
 
               {/* Payment Method */}
