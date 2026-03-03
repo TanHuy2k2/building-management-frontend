@@ -70,7 +70,6 @@ export default function UserBus() {
     id: string;
     finalAmount: number;
   } | null>(null);
-  const [selectedPendingSub, setSelectedPendingSub] = useState<BusSubscription | null>(null);
 
   useEffect(() => {
     if (!currentUser?.id) return;
@@ -1126,7 +1125,6 @@ export default function UserBus() {
                           <Button
                             size="sm"
                             onClick={() => {
-                              setSelectedPendingSub(sub);
                               setSelectedRoute(route);
                               setSelectedBus(bus);
 
