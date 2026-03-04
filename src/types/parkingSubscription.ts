@@ -1,3 +1,5 @@
+import { PaymentStatus } from './payment';
+
 export enum ParkingSubscriptionStatus {
   PENDING = 'pending',
   RESERVED = 'reserved',
@@ -6,7 +8,7 @@ export enum ParkingSubscriptionStatus {
 }
 
 export interface ParkingSubscription {
-  id?: string;
+  id: string;
   user_id: string;
   start_date: Date;
   end_date: Date;
@@ -16,6 +18,7 @@ export interface ParkingSubscription {
   points_used: number;
   total_amount: number;
   points_earned: number;
+  payment_status: PaymentStatus;
   status: ParkingSubscriptionStatus;
   created_at?: Date;
   created_by?: string;

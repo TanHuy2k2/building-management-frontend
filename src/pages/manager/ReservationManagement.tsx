@@ -29,6 +29,7 @@ import { durationHours, formatDateVN, formatTimeVN } from '../../utils/time';
 import { getPaginationNumbers } from '../../utils/pagination';
 import { getBuildingByIdApi } from '../../services/buildingService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { formatVND } from '../../utils/currency';
 
 export default function ReservationManagement() {
   /* ===================== STATE ===================== */
@@ -273,7 +274,7 @@ export default function ReservationManagement() {
                 {r.facility?.facility_type !== FacilityType.ROOM && (
                   <div className="border-t pt-2 space-y-1">
                     <div className="flex justify-between">
-                      <span>Total</span> <strong>{r.total_amount} VND</strong>
+                      <span>Total</span> <strong>{formatVND(r.total_amount)}</strong>
                     </div>
                   </div>
                 )}
