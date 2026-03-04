@@ -4,12 +4,12 @@ import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { useAuth } from '../../contexts/AuthContext';
 import { getRankDetails } from '../../utils/rank';
-import { Crown, Award, TrendingUp } from 'lucide-react';
+import { Crown, Award, TrendingUp, DollarSign } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { EmailAuthProvider, getAuth, reauthenticateWithCredential } from 'firebase/auth';
 import { updatePassword, updateUserProfile } from '../../services/userService';
-import { User as UserInterface } from '../../types';
+import { Payment, User as UserInterface, UserRank } from '../../types';
 import { Label } from '../../components/ui/label';
 import { Input } from '../../components/ui/input';
 import { DEFAULT_AVATAR_URL, POINT_VALUE } from '../../utils/constants';
@@ -17,6 +17,8 @@ import { resolveImageUrl } from '../../utils/image';
 import { formatSnakeCase } from '../../utils/string';
 import { formatVND } from '../../utils/currency';
 import { useNavigate } from 'react-router';
+import { getUserPaymentsApi } from '../../services/paymentService';
+import { getFirstDayOfCurrentMonth } from '../../utils/time';
 
 export default function UserProfile() {
   const navigate = useNavigate();
@@ -32,25 +34,12 @@ export default function UserProfile() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isCapsLockOn, setIsCapsLockOn] = useState(false);
   const [passwordMismatch, setPasswordMismatch] = useState(false);
-
-  useEffect(() => {
-    if (currentUser) setUser({ ...currentUser });
-  }, [currentUser]);
-
-  if (!currentUser || !user) return null;
-
-  const rankDetails = getRankDetails(currentUser.rank);
-  const ranks = [
-    { name: 'bronze', min: 0 },
-    { name: 'silver', min: 1000000 },
-    { name: 'gold', min: 5000000 },
-    { name: 'platinum', min: 10000000 },
-  ];
-  const currentRankIndex = ranks.findIndex((r) => r.name === currentUser.rank);
-  const currentRank = ranks[currentRankIndex];
-  const nextRank = ranks[currentRankIndex + 1] || null;
-  const userSpentBasedOnRank = currentRank.min;
-  const amountNeededForNextRank = nextRank ? nextRank.min - userSpentBasedOnRank : 0;
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [stats, setStats] = useState<{
+    totalAmount: number;
+    pointsEarned: number;
+    payments: Payment[];
+  } | null>(null);
 
   const handleKeyEvent = (e: React.KeyboardEvent<HTMLInputElement>) => {
     setIsCapsLockOn(e.getModifierState('CapsLock'));
@@ -71,7 +60,7 @@ export default function UserProfile() {
 
     if (newPassword !== confirmPassword) {
       toast.error('New password and confirm password do not match');
-      
+
       return;
     }
 
@@ -104,7 +93,7 @@ export default function UserProfile() {
   };
 
   const handleUpdateProfile = async () => {
-    if (!user) return;
+    if (!currentUser || !user) return null;
 
     const formData = new FormData();
     let hasUpdates = false;
@@ -156,6 +145,51 @@ export default function UserProfile() {
       setLoading(false);
     }
   };
+
+  const fetchPayments = async () => {
+    try {
+      setStatsLoading(true);
+
+      const now = new Date();
+      const from = getFirstDayOfCurrentMonth();
+      const to = now.toISOString().split('T')[0];
+      const response = await getUserPaymentsApi({ from, to });
+      if (!response.success) {
+        toast.error(response.message);
+
+        return;
+      }
+
+      toast.success(response.message);
+      setStats({
+        totalAmount: response.data.totalAmount,
+        pointsEarned: response.data.pointsEarned,
+        payments: response.data.payments,
+      });
+    } catch (error) {
+      console.error('Failed to fetch payments: ', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    setUser({ ...currentUser });
+    fetchPayments();
+  }, [currentUser]);
+
+  if (!currentUser || !user) return null;
+
+  const rankDetails = getRankDetails(currentUser.rank);
+  const rankOrder = Object.values(UserRank);
+  const currentRankIndex = rankOrder.indexOf((currentUser.rank as UserRank) ?? UserRank.BRONZE);
+  const nextRank = rankOrder[currentRankIndex + 1]
+    ? getRankDetails(rankOrder[currentRankIndex + 1])
+    : null;
+  const userSpentBasedOnRank = stats?.totalAmount ?? 0;
+  const amountNeededForNextRank = nextRank ? nextRank.minSpent - userSpentBasedOnRank : 0;
 
   return (
     <div className="space-y-6">
@@ -222,9 +256,9 @@ export default function UserProfile() {
             <Award className="size-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">{currentUser.points.toLocaleString()}</div>
+            <div className="text-2xl font-semibold">{currentUser.points} points</div>
             <p className="text-xs text-muted-foreground mt-1">
-              ≈ {(currentUser.points * POINT_VALUE).toLocaleString()} VND
+              ≈ {formatVND(currentUser.points * POINT_VALUE)}
             </p>
           </CardContent>
         </Card>
@@ -232,11 +266,36 @@ export default function UserProfile() {
         {/* Transactions */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm">Transactions</CardTitle>
-            <TrendingUp className="size-4 text-purple-600" />
+            <CardTitle className="text-sm">Total Spent (This Month)</CardTitle>
+            <DollarSign className="size-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-muted-foreground mt-1">Total</p>
+            {statsLoading ? (
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            ) : (
+              <>
+                <div className="text-2xl font-semibold">{formatVND(stats?.totalAmount ?? 0)}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Earned {(stats?.pointsEarned ?? 0).toLocaleString()} points
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm">Total Transactions</CardTitle>
+            <TrendingUp className="size-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            {statsLoading ? (
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            ) : (
+              <>
+                <div className="text-2xl font-semibold">{stats?.payments?.length ?? 0}</div>
+                <p className="text-xs text-muted-foreground mt-1">Transactions this month</p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -253,7 +312,7 @@ export default function UserProfile() {
               <strong>{getRankDetails(nextRank.name).name}</strong> by reaching:
             </p>
 
-            <p className="text-xl font-semibold">{formatVND(nextRank.min)} total spending</p>
+            <p className="text-xl font-semibold">{formatVND(nextRank.minSpent)} total spending</p>
 
             <p className="text-muted-foreground text-sm">
               You need{' '}
@@ -312,7 +371,42 @@ export default function UserProfile() {
           <CardTitle>Recent Transactions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3"></div>
+          {statsLoading ? (
+            <p className="text-base text-muted-foreground">Loading transactions...</p>
+          ) : stats?.payments?.length ? (
+            <div className="space-y-4">
+              {stats.payments.slice(0, 5).map((payment) => (
+                <div
+                  key={payment.id}
+                  className="flex items-center justify-between p-4 border rounded-xl hover:bg-muted/50 transition"
+                >
+                  <div className="space-y-1">
+                    {/* Main title */}
+                    <p className="text-lg font-semibold">
+                      {formatSnakeCase(payment.reference_type)}
+                    </p>
+
+                    {/* Sub info */}
+                    <p className="text-sm text-muted-foreground">
+                      {formatSnakeCase(payment.method)} • {formatSnakeCase(payment.service_type)} •{' '}
+                      {new Date(payment.transaction_time).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div className="text-right space-y-1">
+                    <p className="text-xl font-bold text-purple-600">{formatVND(payment.amount)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      +{Math.floor(payment.amount / 20000)} points
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-base text-muted-foreground">
+              No successful transactions this month.
+            </p>
+          )}
         </CardContent>
       </Card>
 

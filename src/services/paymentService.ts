@@ -1,4 +1,5 @@
-import { PaymentForm, PaymentUrlForm, ResponseInterface } from '../types';
+import { GetPaymentsParams, PaymentForm, PaymentUrlForm, ResponseInterface } from '../types';
+import { buildQuery } from '../utils/query';
 import { API_ENDPOINTS, apiRequest } from './api';
 import { getAccessToken } from './tokenService';
 
@@ -68,6 +69,26 @@ export async function getPaymentByIdApi(id: string): Promise<ResponseInterface> 
   try {
     const token = await getAccessToken();
     const response: ResponseInterface = await apiRequest(API_ENDPOINTS.PAYMENT_BY_ID(id), {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
+
+export async function getUserPaymentsApi(params?: GetPaymentsParams): Promise<ResponseInterface> {
+  try {
+    const token = await getAccessToken();
+    const query = params ? buildQuery(params) : '';
+    const url = query
+      ? `${API_ENDPOINTS.GET_USER_PAYMENTS}?${query}`
+      : API_ENDPOINTS.GET_USER_PAYMENTS;
+    const response: ResponseInterface = await apiRequest(url, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
