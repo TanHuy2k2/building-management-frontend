@@ -12,12 +12,21 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getRankDetails } from '../../utils/rank';
+import { formatSnakeCase } from '../../utils/string';
+import { formatVND } from '../../utils/currency';
+import { UserRank } from '../../types';
+import { useEffect, useState } from 'react';
+import { getUserPaymentsApi } from '../../services/paymentService';
+import { getFirstDayOfCurrentMonth } from '../../utils/time';
+import toast from 'react-hot-toast';
 
 export default function UserHome() {
   const { currentUser } = useAuth();
-
-  if (!currentUser) return null;
-  const rankDetails = getRankDetails(currentUser.rank);
+  const [stats, setStats] = useState<{
+    totalAmount: number;
+    pointsEarned: number;
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const services = [
     {
@@ -62,6 +71,40 @@ export default function UserHome() {
     },
   ];
 
+  const fetchPayments = async () => {
+    try {
+      setLoading(true);
+
+      const now = new Date();
+      const from = getFirstDayOfCurrentMonth();
+      const to = now.toISOString().split('T')[0];
+      const response = await getUserPaymentsApi({ from, to });
+      if (!response.success) {
+        toast.error(response.message);
+
+        return;
+      }
+
+      toast.success(response.message);
+      setStats({
+        totalAmount: response.data.totalAmount,
+        pointsEarned: response.data.pointsEarned,
+      });
+    } catch (error) {
+      console.error('Failed to fetch payments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!currentUser) return;
+    fetchPayments();
+  }, [currentUser]);
+
+  if (!currentUser) return null;
+  const rankDetails = getRankDetails(currentUser.rank);
+
   return (
     <div className="space-y-6">
       <Card className={rankDetails.bgColor}>
@@ -77,29 +120,45 @@ export default function UserHome() {
               </div>
             </div>
             <Badge variant="outline" className="bg-white">
-              1 point = 1000 VNĐ
+              1 point = 1.000 VND
             </Badge>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Total spent</p>
-              <p className="text-lg font-semibold">30000 VNĐ</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total points</p>
-              <p className="text-lg font-semibold">
-                {(currentUser.points ?? 0 * rankDetails.pointValue).toLocaleString()} VNĐ
-              </p>
-            </div>
+            {loading ? (
+              <>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total spent</p>
+                  <p className="text-lg font-semibold">Loading...</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted-foreground">Total points earned</p>
+                  <p className="text-lg font-semibold">Loading...</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total spent</p>
+                  <p className="text-lg font-semibold">{formatVND(stats?.totalAmount ?? 0)}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted-foreground">Total points earned</p>
+                  <p className="text-lg font-semibold">{stats?.pointsEarned ?? 0}</p>
+                </div>
+              </>
+            )}
           </div>
+
           <div className="mt-4 p-3 bg-white rounded-lg">
             <div className="flex items-center gap-2 text-sm">
               <TrendingUp className="size-4 text-green-600" />
               <span>
-                Mỗi 20.000 VNĐ chi tiêu = 1 điểm • {rankDetails.name}:{' '}
-                {rankDetails.pointValue.toLocaleString()} VNĐ/điểm
+                Every 20.000 VND spent = 1 membership point • {formatSnakeCase(rankDetails.name)}:{' '}
+                {rankDetails.discount}% discount
               </span>
             </div>
           </div>
@@ -108,7 +167,7 @@ export default function UserHome() {
 
       {/* Services Grid */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Dịch vụ</h2>
+        <h2 className="text-lg font-semibold mb-4">Services</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {services.map((service, index) => {
             const Icon = service.icon;
@@ -133,59 +192,35 @@ export default function UserHome() {
 
       {/* Quick Stats */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Hệ thống hạng thành viên</h2>
+        <h2 className="text-lg font-semibold mb-4">Membership Rank System</h2>
         <Card>
           <CardContent className="pt-6">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-orange-50">
-                    <Crown className="size-5 text-orange-600" />
+            {Object.values(UserRank).map((rankKey) => {
+              const rank = getRankDetails(rankKey);
+
+              return (
+                <div
+                  key={rank.name}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${rank.bgColor}`}>
+                      <Crown className={`size-5 ${rank.color}`} />
+                    </div>
+                    <div>
+                      <p className="font-medium">{formatSnakeCase(rank.name)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {rank.maxSpent === Infinity
+                          ? `Above ${formatVND(rank.minSpent)}`
+                          : `${formatVND(rank.minSpent)} - ${formatVND(rank.maxSpent)}`}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium">Đồng</p>
-                    <p className="text-sm text-muted-foreground">Dưới 2 triệu</p>
-                  </div>
+
+                  <p className="text-sm font-medium">{rank.discount}% discount</p>
                 </div>
-                <p className="text-sm font-medium">1.000 VNĐ/điểm</p>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-gray-50">
-                    <Crown className="size-5 text-gray-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Bạc</p>
-                    <p className="text-sm text-muted-foreground">2 - 5 triệu</p>
-                  </div>
-                </div>
-                <p className="text-sm font-medium">1.200 VNĐ/điểm</p>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-yellow-50">
-                    <Crown className="size-5 text-yellow-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Vàng</p>
-                    <p className="text-sm text-muted-foreground">5 - 10 triệu</p>
-                  </div>
-                </div>
-                <p className="text-sm font-medium">1.400 VNĐ/điểm</p>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-50">
-                    <Crown className="size-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Bạch Kim</p>
-                    <p className="text-sm text-muted-foreground">Trên 10 triệu</p>
-                  </div>
-                </div>
-                <p className="text-sm font-medium">1.500 VNĐ/điểm</p>
-              </div>
-            </div>
+              );
+            })}
           </CardContent>
         </Card>
       </div>

@@ -150,5 +150,6 @@ export const API_ENDPOINTS = {
   CREATE_PAYMENT: '/payments/create',
   CREATE_MOMO_PAYMENT: '/momo/create',
   CREATE_VNPAY_PAYMENT: '/vnpay/create',
+  GET_USER_PAYMENTS: '/payments',
   PAYMENT_BY_ID: (id: string) => `/payments/${id}`,
 };
