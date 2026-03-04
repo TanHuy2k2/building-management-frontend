@@ -1,4 +1,4 @@
-import { Building, Facility, OrderDirection, User } from '.';
+import { Building, Facility, OrderDirection, PaymentStatus, User } from '.';
 
 export enum FacilityReservationStatus {
   PENDING = 'pending',
@@ -19,6 +19,7 @@ export interface FacilityReservation {
   points_used: number;
   total_amount: number;
   point_earned: number;
+  payment_status: PaymentStatus;
   status: FacilityReservationStatus;
   created_at: Date;
   updated_at?: Date | null;

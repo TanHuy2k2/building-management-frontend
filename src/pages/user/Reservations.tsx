@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -25,7 +25,7 @@ import {
 import { DEFAULT_ORDER_BY, DEFAULT_PAGE, DEFAULT_PAGE_SIZE } from '../../utils/constants';
 import { getAllFacilityApi, getFacilityByIdApi } from '../../services/facilityService';
 import toast from 'react-hot-toast';
-import { formatVND } from '../../utils/currency';
+import { calculatePayment, formatVND } from '../../utils/currency';
 import { getPaginationNumbers } from '../../utils/pagination';
 import {
   createFacilityReservationApi,
@@ -33,7 +33,7 @@ import {
 } from '../../services/facilityReservationService';
 import { durationHours } from '../../utils/time';
 import PaymentMethodSelector from '../PaymentMethod';
-import { PaymentReferenceType } from '../../types/payment';
+import { PaymentReferenceType, PaymentStatus, VATRate } from '../../types/payment';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -105,39 +105,39 @@ export default function UserReservations() {
     }
   };
 
+  const fetchHistory = async () => {
+    try {
+      const res = await getReservationByUserApi();
+      if (!res.success) {
+        toast.error(res.message);
+
+        return;
+      }
+
+      setMyReservations(res.data);
+
+      const facilityIds = [...new Set(res.data.map((r: FacilityReservation) => r.facility_id))];
+
+      const facilityResponses = await Promise.all(
+        facilityIds.map((id) => getFacilityByIdApi(String(id))),
+      );
+      const map: Record<string, Facility> = {};
+      facilityResponses.forEach((fRes) => {
+        if (fRes.success) {
+          map[fRes.data.id] = fRes.data;
+        }
+      });
+
+      setFacilityMap(map);
+    } catch {
+      toast.error('Cannot get facility reservation history!');
+    }
+  };
+
   useEffect(() => {
     if (viewMode === 'reserve') {
       fetchFacilities(DEFAULT_PAGE);
     }
-
-    const fetchHistory = async () => {
-      try {
-        const res = await getReservationByUserApi();
-        if (!res.success) {
-          toast.error(res.message);
-
-          return;
-        }
-
-        setMyReservations(res.data);
-
-        const facilityIds = [...new Set(res.data.map((r: FacilityReservation) => r.facility_id))];
-
-        const facilityResponses = await Promise.all(
-          facilityIds.map((id) => getFacilityByIdApi(String(id))),
-        );
-        const map: Record<string, Facility> = {};
-        facilityResponses.forEach((fRes) => {
-          if (fRes.success) {
-            map[fRes.data.id] = fRes.data;
-          }
-        });
-
-        setFacilityMap(map);
-      } catch {
-        toast.error('Cannot get facility reservation history!');
-      }
-    };
 
     fetchHistory();
   }, [viewMode]);
@@ -161,11 +161,11 @@ export default function UserReservations() {
         setForm(initialForm);
         fetchFacilities(DEFAULT_PAGE);
         setOpenReserve(false);
-        setFacilityMap((prev) => ({ ...prev, [selectedFacility.id]: selectedFacility }));
 
         return;
       }
 
+      setFacilityMap((prev) => ({ ...prev, [selectedFacility.id]: selectedFacility }));
       setCreatedReservation(res.data);
       setStep(2);
     } catch (error) {
@@ -208,6 +208,8 @@ export default function UserReservations() {
       setForm(initialForm);
       setStep(1);
       setCreatedReservation({ id: '', finalAmount: 0 });
+      fetchHistory();
+      setViewMode('history');
     } else if (paymentStatus === 'failed') {
       toast.error('Payment failed!');
     }
@@ -215,10 +217,31 @@ export default function UserReservations() {
     if (paymentStatus) {
       window.history.replaceState({}, '', location.pathname);
     }
-  }, [location.search]);
+  }, [location.search, facilityMap]);
 
   const url = new URL(window.location.origin + location.pathname);
   const returnUrl = url.toString();
+
+  const pricing = useMemo(() => {
+    if (!selectedFacility) return null;
+
+    const userPoints = currentUser?.points || 0;
+    const amount = selectedFacility.base_price * form.hour_duration;
+    const { finalAmount, discount, pointsEarned, maxPointsUsed, finalPointsUsed, vatCharge } =
+      calculatePayment(amount, currentUser?.rank, form.points_used, VATRate.DEFAULT);
+    const maxPointsUsable = Math.min(userPoints, maxPointsUsed);
+
+    return {
+      amount,
+      userPoints,
+      finalAmount,
+      discount,
+      vatCharge,
+      pointsEarned,
+      finalPointsUsed,
+      maxPointsUsable,
+    };
+  }, [selectedFacility, form.hour_duration, form.points_used, currentUser]);
 
   return (
     <div className="space-y-6">
@@ -242,19 +265,15 @@ export default function UserReservations() {
           {/* STEP 1: RESERVATION FORM */}
           {step === 1 &&
             selectedFacility &&
+            pricing &&
             (() => {
-              const userPoints = currentUser?.points || 0;
-              const total = selectedFacility.base_price * form.hour_duration;
-              const maxPointsByOrder = Math.floor(total / 1000);
-              const maxPointsUsable = Math.min(userPoints, maxPointsByOrder);
-              const safePointsUsed = Math.min(form.points_used, maxPointsUsable);
-              const estimatedTotal = total - safePointsUsed * 1000;
+              const currentPoints = currentUser?.points;
+              const maxPointsUsable = pricing?.maxPointsUsable;
               const pointsUsed = form.points_used;
-
               return (
                 <div className="space-y-3">
                   <p className="text-xs text-muted-foreground">
-                    You have: <span className="font-semibold">{userPoints}</span> points
+                    You have: <span className="font-semibold">{currentPoints}</span> points
                   </p>
 
                   <div className="space-y-2">
@@ -288,7 +307,7 @@ export default function UserReservations() {
                     />
                   </div>
 
-                  {selectedFacility?.facility_type !== FacilityType.ROOM && (
+                  {selectedFacility?.facility_type !== FacilityType.ROOM && pricing && (
                     <>
                       <div className="space-y-2">
                         <Label>Points Used</Label>
@@ -318,7 +337,7 @@ export default function UserReservations() {
                         />
                       </div>
 
-                      {pointsUsed > 0 && pointsUsed <= maxPointsUsable && (
+                      {pointsUsed > 0 && pointsUsed <= pricing.maxPointsUsable && (
                         <p className="text-xs text-green-600">− {formatVND(pointsUsed * 1000)}</p>
                       )}
                     </>
@@ -328,30 +347,43 @@ export default function UserReservations() {
                     * If start time is not selected, the parking will start from tomorrow.
                   </div>
 
-                  <div className="border-t pt-3 space-y-2 text-sm pb-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span>{formatVND(total)}</span>
-                    </div>
-
-                    {safePointsUsed > 0 && (
+                  {pricing && selectedFacility.base_price && (
+                    <div className="border-t pt-3 space-y-2 text-sm pb-3">
                       <div className="flex justify-between text-red-500">
-                        <span>Membership points</span>
-                        <span>-{formatVND(safePointsUsed * 1000)}</span>
+                        <span>Subtotal</span>
+                        <span>{formatVND(pricing.amount)}</span>
                       </div>
-                    )}
 
-                    <div className="flex justify-between font-semibold text-base pt-2 border-t">
-                      <span>Estimated total</span>
-                      <span>{formatVND(estimatedTotal)}</span>
+                      <div className="flex justify-between text-red-500">
+                        <span>Ranks discount</span>
+                        <span>-{formatVND(pricing.discount)}</span>
+                      </div>
+
+                      <div className="flex justify-between text-red-500">
+                        <span>VAT</span>
+                        <span>+{formatVND(pricing.vatCharge)}</span>
+                      </div>
+
+                      {pricing?.finalPointsUsed > 0 && (
+                        <div className="flex justify-between text-red-500">
+                          <span>Membership points</span>
+                          <span>-{formatVND(pricing?.finalPointsUsed * 1000)}</span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between font-semibold text-base pt-2 border-t">
+                        <span>Estimated total</span>
+                        <span>{formatVND(pricing?.finalAmount)}</span>
+                      </div>
+
+                      <div className="flex justify-between text-base pt-2 border-t">
+                        <span>Points earned</span>
+                        <span>{pricing.pointsEarned}</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="flex justify-end gap-2 pt-3">
-                    <Button variant="outline" onClick={() => setOpenReserve(false)}>
-                      Cancel
-                    </Button>
-
                     <Button onClick={handleReserve} disabled={loading}>
                       {loading
                         ? 'Creating...'
@@ -531,7 +563,7 @@ export default function UserReservations() {
           {myReservations.map((r) => {
             const facility = facilityMap[r.facility_id];
             const statusConfig = RESERVATION_STATUS_CONFIG[r.status];
-            const location = facility.location ?? null;
+            const facilityLocation = facility.location ?? null;
 
             return (
               <Card key={r.id}>
@@ -550,11 +582,11 @@ export default function UserReservations() {
                   </div>
 
                   {/* Info */}
-                  {location ? (
+                  {facilityLocation ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MapPin className="size-4" />
-                      Location: {location.area} - Floor {location.floor} (
-                      {location.outdoor ? 'Outdoor' : 'Indoor'})
+                      Location: {facilityLocation.area} - Floor {facilityLocation.floor} (
+                      {facilityLocation.outdoor ? 'Outdoor' : 'Indoor'})
                     </div>
                   ) : (
                     ''
@@ -570,7 +602,7 @@ export default function UserReservations() {
 
                   {/* Price */}
                   {r.base_amount ? (
-                    <p className="text-sm font-semibold pt-1">{formatVND(r.base_amount)}</p>
+                    <p className="text-sm font-semibold pt-1">{formatVND(r.total_amount)}</p>
                   ) : (
                     ''
                   )}
@@ -578,6 +610,36 @@ export default function UserReservations() {
                     Created:
                     {new Date(r.created_at).toLocaleString()}
                   </div>
+
+                  {r.payment_status === PaymentStatus.PENDING && (
+                    <>
+                      <p className="text-sm text-yellow-600 mt-3">
+                        You haven't paid for this invoice yet.
+                      </p>
+                      <div className="pt-1 flex justify-end">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setSelectedFacility(facility);
+                            setForm({
+                              facility_id: '',
+                              hour_duration: durationHours(r.start_time, r.end_time),
+                              points_used: 0,
+                              start_date: new Date(r.start_time),
+                            });
+                            setCreatedReservation({
+                              id: r.id,
+                              finalAmount: r.total_amount,
+                            });
+                            setOpenReserve(true);
+                            setStep(2);
+                          }}
+                        >
+                          Pay Now
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             );
