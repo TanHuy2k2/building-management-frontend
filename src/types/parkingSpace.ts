@@ -17,7 +17,7 @@ export enum ParkingSpaceStatus {
 }
 
 export interface ParkingSpace {
-  id?: string;
+  id: string;
   building_id: string;
   location: ParkingSpaceLocation;
   code: string;

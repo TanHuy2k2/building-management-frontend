@@ -13,11 +13,13 @@ import {
   ParkingSubscription,
   ParkingSubscriptionStatus,
   PaymentReferenceType,
+  VATRate,
+  PaymentStatus,
 } from '../../types';
 import { useLocation } from 'react-router-dom';
 import { getAllBuildingApi } from '../../services/buildingService';
 import { getAllParkingApi } from '../../services/parkingSpaceService';
-import { formatVND } from '../../utils/currency';
+import { calculatePayment, formatVND } from '../../utils/currency';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +34,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import PaymentMethodSelector from '../PaymentMethod';
+import { calcMonthDuration } from '../../utils/time';
 
 export default function UserParking() {
   const location = useLocation();
@@ -57,6 +60,7 @@ export default function UserParking() {
     id: string;
     finalAmount: number;
   } | null>(null);
+  const [open, setOpen] = useState(false);
 
   /* ================= FETCH BUILDINGS ================= */
   useEffect(() => {
@@ -239,25 +243,49 @@ export default function UserParking() {
   }, [location.search, buildings]);
 
   const url = new URL(window.location.origin + location.pathname);
-  if (selectedBuilding) {
+  if (selectedBuilding && selectedSpace) {
     url.searchParams.set('buildingId', selectedBuilding.id);
+    url.searchParams.set('parkingId', selectedSpace.id);
   }
   const returnUrl = url.toString();
+
+  const pricing = useMemo(() => {
+    if (!selectedSpace) return null;
+
+    const userPoints = currentUser?.points || 0;
+    const amount = selectedSpace.base_price * form.month_duration;
+    const { finalAmount, discount, pointsEarned, maxPointsUsed, finalPointsUsed, vatCharge } =
+      calculatePayment(amount, currentUser?.rank, form.points_used, VATRate.DEFAULT);
+    const maxPointsUsable = Math.min(userPoints, maxPointsUsed);
+
+    return {
+      amount,
+      userPoints,
+      finalAmount,
+      discount,
+      vatCharge,
+      pointsEarned,
+      finalPointsUsed,
+      maxPointsUsable,
+    };
+  }, [selectedSpace, form.month_duration, form.points_used, currentUser]);
 
   /* ================= UI ================= */
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
       {/** DIALOG */}
       <Dialog
-        open={!!selectedSpace}
+        open={open}
         onOpenChange={() => {
           setSelectedSpace(null);
-          setForm({ month_duration: 1, points_used: 0 });
+          setForm({ id: '', month_duration: 1, points_used: 0 });
           setStep(1);
           setCreatedSubscription({ id: '', finalAmount: 0 });
           if (selectedBuilding) {
             fetchParkingSpaces(selectedBuilding);
           }
+          setOpen(false);
+          setSelectedMySubscription(null);
         }}
       >
         <DialogContent style={{ maxWidth: 760 }}>
@@ -350,15 +378,46 @@ export default function UserParking() {
                     Created at:{' '}
                     {new Date(String(selectedMySubscription.created_at)).toLocaleString()}
                   </div>
+
+                  {selectedMySubscription &&
+                    selectedMySubscription.payment_status === PaymentStatus.PENDING && (
+                      <>
+                        <p className="text-sm text-yellow-600 mt-3">
+                          You haven't paid for this invoice yet.
+                        </p>
+                        <div className="pt-1 flex justify-end">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setSelectedSpace(selectedSpace);
+                              setForm({
+                                id: selectedMySubscription.id,
+                                start_date: selectedMySubscription.start_date,
+                                month_duration: calcMonthDuration(
+                                  selectedMySubscription.start_date,
+                                  selectedMySubscription.end_date,
+                                ),
+                                points_used: selectedMySubscription.points_used,
+                              });
+                              setCreatedSubscription({
+                                id: selectedMySubscription.id,
+                                finalAmount: selectedMySubscription.total_amount,
+                              });
+                              setOpen(true);
+                              setStep(2);
+                            }}
+                          >
+                            Pay Now
+                          </Button>
+                        </div>
+                      </>
+                    )}
                 </div>
               ) : (
+                pricing &&
                 (() => {
-                  const userPoints = currentUser?.points || 0;
-                  const total = selectedSpace.base_price * form.month_duration;
-                  const maxPointsByOrder = Math.floor(total / 1000);
-                  const maxPointsUsable = Math.min(userPoints, maxPointsByOrder);
-                  const safePointsUsed = Math.min(form.points_used, maxPointsUsable);
-                  const estimatedTotal = total - safePointsUsed * 1000;
+                  const userPoints = pricing.userPoints;
+                  const maxPointsUsable = pricing.maxPointsUsable;
                   const pointsUsed = form.points_used;
 
                   return (
@@ -449,6 +508,42 @@ export default function UserParking() {
                         <p className="text-xs text-green-600">− {formatVND(pointsUsed * 1000)}</p>
                       )}
 
+                      {pricing && (
+                        <div className="border-t pt-3 space-y-2 text-sm pb-3">
+                          <div className="flex justify-between text-red-500">
+                            <span>Subtotal</span>
+                            <span>{formatVND(pricing.amount)}</span>
+                          </div>
+
+                          <div className="flex justify-between text-red-500">
+                            <span>Ranks discount</span>
+                            <span>-{formatVND(pricing.discount)}</span>
+                          </div>
+
+                          <div className="flex justify-between text-red-500">
+                            <span>VAT</span>
+                            <span>+{formatVND(pricing.vatCharge)}</span>
+                          </div>
+
+                          {pricing?.finalPointsUsed > 0 && (
+                            <div className="flex justify-between text-red-500">
+                              <span>Membership points</span>
+                              <span>-{formatVND(pricing?.finalPointsUsed * 1000)}</span>
+                            </div>
+                          )}
+
+                          <div className="flex justify-between font-semibold text-base pt-2 border-t">
+                            <span>Estimated total</span>
+                            <span>{formatVND(pricing?.finalAmount)}</span>
+                          </div>
+
+                          <div className="flex justify-between text-base pt-2 border-t">
+                            <span>Points earned</span>
+                            <span>{pricing.pointsEarned}</span>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Note */}
                       <div
                         style={{
@@ -459,25 +554,6 @@ export default function UserParking() {
                         }}
                       >
                         * If start time is not selected, the parking will start from tomorrow.
-                      </div>
-
-                      <div className="border-t pt-3 space-y-2 text-sm pb-3">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Subtotal</span>
-                          <span>{formatVND(total)}</span>
-                        </div>
-
-                        {safePointsUsed > 0 && (
-                          <div className="flex justify-between text-red-500">
-                            <span>Membership points</span>
-                            <span>-{formatVND(safePointsUsed * 1000)}</span>
-                          </div>
-                        )}
-
-                        <div className="flex justify-between font-semibold text-base pt-2 border-t">
-                          <span>Estimated total</span>
-                          <span>{formatVND(estimatedTotal)}</span>
-                        </div>
                       </div>
 
                       <Button style={{ width: '100%' }} onClick={() => handleSubmit()}>
@@ -732,6 +808,7 @@ export default function UserParking() {
                               if (isMine && mySubscription) {
                                 setSelectedSpace(space);
                                 setSelectedMySubscription(mySubscription);
+                                setOpen(true);
 
                                 return;
                               }
@@ -739,6 +816,8 @@ export default function UserParking() {
                               if (!available) return;
 
                               setSelectedSpace(space);
+                              setSelectedMySubscription(null);
+                              setOpen(true);
                             }}
                             style={{
                               background: available ? '#bbf7d0' : reserved ? '#fecaca' : '#e5e7eb',
